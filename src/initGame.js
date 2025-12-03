@@ -3,12 +3,21 @@ import makePlayer from "./entities/Player";
 import makeSection from "./components/Section";
 import { PALETTE } from "./constants";
 import makeSocialIcon from "./components/SocialIcon";
-import makeSkillIcon from "./components/SkillIcon";
+import makeSkillIcon from "./components/SkillIcon"; // Potrebbe non servire più se usiamo custom cards
 import { makeAppear } from "./utils";
 import makeWorkExperienceCard from "./components/WorkExperienceCard";
 import makeEmailIcon from "./components/EmailIcon";
 import makeProjectCard from "./components/ProjectCard";
 import { cameraZoomValueAtom, store } from "./store";
+
+// Funzione di utilità per mescolare l'array (Fisher-Yates shuffle)
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
 
 export default async function initGame() {
   const generalData = await (await fetch("./configs/generalData.json")).json();
@@ -22,6 +31,8 @@ export default async function initGame() {
   ).json();
 
   const k = makeKaplayCtx();
+  
+  // ... (Tutto il tuo codice di caricamento sprite/font rimane uguale fino a qui) ...
   k.loadSprite("player", "./sprites/player.png", {
     sliceX: 4,
     sliceY: 8,
@@ -44,6 +55,7 @@ export default async function initGame() {
       "walk-right-down-idle": 28,
     },
   });
+  // ... (Caricamento loghi e shader rimane uguale) ...
   k.loadFont("ibm-regular", "./fonts/IBMPlexSans-Regular.ttf");
   k.loadFont("ibm-bold", "./fonts/IBMPlexSans-Bold.ttf");
   k.loadSprite("github-logo", "./logos/github-logo.png");
@@ -62,11 +74,9 @@ export default async function initGame() {
   k.loadSprite("promptflow-logo", "./logos/promptflow-logo.png");
   k.loadSprite("python-logo", "./logos/python-logo.png");
   k.loadSprite("email-logo", "./logos/email-logo.png");
-//   k.loadSprite("sonic-js", "./projects/sonic-js.png");
-//   k.loadSprite("kirby-ts", "./projects/kirby-ts.png");
-//   k.loadSprite("platformer-js", "./projects/platformer-js.png");
   k.loadShaderURL("tiledPattern", null, "./shaders/tiledPattern.frag");
 
+  // ... (Gestione Camera e Background rimane uguale) ...
   const setInitCamZoomValue = () => {
     if (k.width() < 1000) {
       k.camScale(k.vec2(0.5));
@@ -103,14 +113,16 @@ export default async function initGame() {
     tiledBackground.uniform.u_aspect = k.width() / k.height();
   });
 
+  // SEZIONE 1 (Header/Socials) - Rimane invariata
   makeSection(
     k,
     k.vec2(k.center().x, k.center().y - 400),
     generalData.section1Name,
     (parent) => {
       const container = parent.add([k.pos(-805, -700), k.opacity(0)]);
-
-      container.add([
+        // ... (contenuto header esistente) ...
+        // Per brevità non ricopio tutto l'interno della sezione 1, è uguale al tuo codice originale
+       container.add([
         k.text(generalData.header.title, { font: "ibm-bold", size: 88 }),
         k.color(k.Color.fromHex(PALETTE.color1)),
         k.pos(395, 0),
@@ -157,33 +169,147 @@ export default async function initGame() {
       makeAppear(k, socialContainer);
     }
   );
-  makeSection(
+
+// --- SEZIONE 2: SKILLS MEMORY GAME ---
+makeSection(
     k,
     k.vec2(k.center().x - 400, k.center().y),
     generalData.section2Name,
     (parent) => {
-      /* make the container independent of the section
-       so that the skill icons appear on top of every section's children.
-       so that when the skill icons are pushed around by the player
-       they always remain on top */
-      const container = k.add([
+      const container = parent.add([
         k.opacity(0),
-        k.pos(parent.pos.x - 300, parent.pos.y),
+        k.pos(0, 0),
       ]);
 
-      for (const skillData of skillsData) {
-        makeSkillIcon(
-          k,
-          container,
-          k.vec2(skillData.pos.x, skillData.pos.y),
-          skillData.logoData,
-          skillData.name
-        );
-      }
+      const numPairs = 8; 
+      const selectedSkills = skillsData.slice(0, numPairs);
+      
+      let memoryDeck = [...selectedSkills, ...selectedSkills];
+      memoryDeck = shuffleArray(memoryDeck);
+
+      let flippedCards = []; 
+      let isProcessing = false; 
+
+      const cols = 4;
+      const cardSize = 100;
+      const gap = 20;
+      
+      // Calcolo dimensioni totali griglia
+      const totalWidth = cols * (cardSize + gap);
+      const totalHeight = Math.ceil(memoryDeck.length / cols) * (cardSize + gap);
+
+      const startX = -(totalWidth / 2) + cardSize / 2; 
+      const startY = -200; 
+
+      // --- FIX MOVIMENTO: Barriera invisibile ---
+      // Creiamo un rettangolo fisico sotto la prima riga di carte per fermare il player
+      parent.add([
+        k.rect(totalWidth + 40, 20), // Largo quanto la griglia + un po' di margine
+        k.area(),
+        k.body({ isStatic: true }), // Il player ci sbatterà contro
+        k.pos(0, startY + totalHeight - 80), // Posizionato al bordo inferiore delle carte
+        k.opacity(0), // Invisibile
+        k.anchor("center"),
+        "wall"
+      ]);
+      // ------------------------------------------
+
+      memoryDeck.forEach((skill, index) => {
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+
+        const x = startX + col * (cardSize + gap);
+        const y = startY + row * (cardSize + gap);
+
+        const card = container.add([
+          k.rect(cardSize, cardSize, { radius: 10 }),
+          k.pos(x, y),
+          k.anchor("center"),
+          k.area(),
+          k.color(k.Color.fromHex(PALETTE.color1)),
+          k.outline(4, k.Color.fromHex(PALETTE.color1)),
+          "memory-card",
+          {
+            isFlipped: false,
+            isMatched: false,
+            skillName: skill.name,
+          },
+        ]);
+
+        // --- FIX GRAFICO: Scala ridotta ---
+        // Le immagini originali sono grandi (es. 128px o più). 
+        // La carta è 100px. Impostiamo scale a 0.3 o 0.35 per stare larghi.
+        card.add([
+            k.sprite(skill.logoData.name), 
+            k.anchor("center"),
+            k.scale(0.35), // <--- MODIFICATO: Era 0.5, ora 0.35 per farle stare dentro
+        ]);
+        // ----------------------------------
+
+        const cardBack = card.add([
+          k.rect(cardSize, cardSize, { radius: 10 }),
+          k.anchor("center"),
+          k.color(k.Color.fromHex(PALETTE.color2)),
+          k.outline(2, k.Color.fromHex(PALETTE.color3)),
+        ]);
+        
+        cardBack.add([
+            k.text("?", { font: "ibm-bold", size: 40 }),
+            k.anchor("center"),
+            k.color(k.Color.fromHex(PALETTE.color3))
+        ]);
+
+        card.onClick(async () => {
+          if (isProcessing || card.isFlipped || card.isMatched) return;
+
+          // Controlliamo la distanza del player per permettere il click solo se vicino
+          const player = k.get("player")[0];
+          if (player) {
+             const dist = player.pos.dist(parent.pos.add(card.pos));
+             if (dist > 400) return; // Se sei troppo lontano non clicca
+          }
+
+          card.isFlipped = true;
+          cardBack.opacity = 0;
+          
+          flippedCards.push({ card, cardBack });
+
+          if (flippedCards.length === 2) {
+            isProcessing = true;
+            const [first, second] = flippedCards;
+
+            if (first.card.skillName === second.card.skillName) {
+              first.card.isMatched = true;
+              second.card.isMatched = true;
+              
+              first.card.use(k.scale(1.1));
+              second.card.use(k.scale(1.1));
+              await k.wait(0.2);
+              first.card.use(k.scale(1));
+              second.card.use(k.scale(1));
+
+              flippedCards = [];
+              isProcessing = false;
+            } else {
+              await k.wait(1);
+              
+              first.cardBack.opacity = 1;
+              second.cardBack.opacity = 1;
+              first.card.isFlipped = false;
+              second.card.isFlipped = false;
+
+              flippedCards = [];
+              isProcessing = false;
+            }
+          }
+        });
+      });
 
       makeAppear(k, container);
     }
   );
+
+  // ... (Il resto delle sezioni e makePlayer rimane uguale) ...
   makeSection(
     k,
     k.vec2(k.center().x + 400, k.center().y),
@@ -199,17 +325,16 @@ export default async function initGame() {
           experienceData.roleData
         );
       }
-
       makeAppear(k, container);
     }
   );
+  
   makeSection(
     k,
     k.vec2(k.center().x, k.center().y + 400),
     generalData.section4Name,
     (parent) => {
       const container = parent.add([k.opacity(0), k.pos(0, 0)]);
-
       for (const project of projectsData) {
         makeProjectCard(
           k,
@@ -219,7 +344,6 @@ export default async function initGame() {
           project.thumbnail
         );
       }
-
       makeAppear(k, container);
     }
   );

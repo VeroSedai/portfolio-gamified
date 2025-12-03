@@ -1,0 +1,19 @@
+[
+    {
+      "pos": { "x": 300, "y": 250 },
+      "name": "GitHub",
+      "description": "GitHub is where I host my projects.",
+      "link": "https://github.com/jslegenddev",
+      "logoData": { "name": "github-logo", "width": 228.6, "height": 179.5 }
+    },
+    {
+      "pos": { "x": 1100, "y": 250 },
+      "name": "Email",
+      "address": "jslegend@protonmail.com",
+      "logoData": {
+        "name": "email-logo",
+        "width": 128,
+        "height": 128
+      }
+    }
+  ]
