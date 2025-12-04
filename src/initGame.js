@@ -3,7 +3,7 @@ import makePlayer from "./entities/Player";
 import makeSection from "./components/Section";
 import { PALETTE } from "./constants";
 import makeSocialIcon from "./components/SocialIcon";
-import makeSkillIcon from "./components/SkillIcon"; // Potrebbe non servire più se usiamo custom cards
+import makeSkillIcon from "./components/SkillIcon";
 import { makeAppear } from "./utils";
 import makeWorkExperienceCard from "./components/WorkExperienceCard";
 import makeEmailIcon from "./components/EmailIcon";
@@ -37,6 +37,7 @@ export default async function initGame() {
 
   const k = makeKaplayCtx();
 
+  // --- CARICAMENTO ASSETS ---
   k.loadSprite("player", "./sprites/player.png", {
     sliceX: 4,
     sliceY: 8,
@@ -59,9 +60,11 @@ export default async function initGame() {
       "walk-right-down-idle": 28,
     },
   });
-  // ... (Caricamento loghi e shader) ...
+
   k.loadFont("ibm-regular", "./fonts/IBMPlexSans-Regular.ttf");
   k.loadFont("ibm-bold", "./fonts/IBMPlexSans-Bold.ttf");
+  
+  // Caricamento Loghi
   k.loadSprite("github-logo", "./logos/github-logo.png");
   k.loadSprite("linkedin-logo", "./logos/linkedin-logo.png");
   k.loadSprite("azure-logo", "./logos/azure-logo.png");
@@ -78,12 +81,16 @@ export default async function initGame() {
   k.loadSprite("promptflow-logo", "./logos/promptflow-logo.png");
   k.loadSprite("python-logo", "./logos/python-logo.png");
   k.loadSprite("email-logo", "./logos/email-logo.png");
+  k.loadSprite("netcore-logo", "./logos/netcore-logo.png");
+  k.loadSprite("TarnishedMindMap", "./projects/TarnishedMindMap.png");
+  
+  // Caricamento Shader
   k.loadShaderURL("tiledPattern", null, "./shaders/tiledPattern.frag");
 
   // Music & SFX
   k.loadSound("bgm", "./audio/background-music.mp3");
   k.loadSound("flip", "./audio/flip.mp3");
-    k.loadSound("match", "./audio/match.mp3");
+  k.loadSound("match", "./audio/match.mp3");
 
   let bgm = null;
   let musicStarted = false;
@@ -105,7 +112,7 @@ export default async function initGame() {
     if (bgm) bgm.volume = store.get(musicVolumeAtom);
   });
 
-  // ... (Gestione Camera e Background rimane uguale) ...
+  // Camera settings
   const setInitCamZoomValue = () => {
     if (k.width() < 1000) {
       k.camScale(k.vec2(0.5));
@@ -122,15 +129,17 @@ export default async function initGame() {
     if (cameraZoomValue !== k.camScale().x) k.camScale(k.vec2(cameraZoomValue));
   });
 
+  // --- BACKGROUND SHADER (CYBERPUNK STYLE) ---
   const tiledBackground = k.add([
     k.uvquad(k.width(), k.height()),
     k.shader("tiledPattern", () => ({
-      u_time: k.time() / 20,
-      u_color1: k.Color.fromHex(PALETTE.color3),
-      u_color2: k.Color.fromHex(PALETTE.color2),
-      u_speed: k.vec2(1, -1),
+      u_time: k.time() / 15,
+      // COLORI HARDCODED PER STILE DARK/NEON (Ignoriamo PALETTE qui per sicurezza)
+      u_color1: k.Color.fromHex("#0b0c15"), // Sfondo: Blu Notte Profondo
+      u_color2: k.Color.fromHex("#2de2e6"), // Griglia: Ciano Neon
+      u_speed: k.vec2(0.3, -0.3),           // Movimento lento
       u_aspect: k.width() / k.height(),
-      u_size: 5,
+      u_size: 10,                           // Griglia più fitta (tech look)
     })),
     k.pos(0, 0),
     k.fixed(),
@@ -143,7 +152,7 @@ export default async function initGame() {
   });
 
 
-  // SEZIONE 1 (Header/Socials) - Rimane invariata
+  // --- SEZIONE 1 (Header/Socials) ---
   makeSection(
     k,
     k.vec2(k.center().x, k.center().y - 400),
@@ -152,7 +161,8 @@ export default async function initGame() {
       const container = parent.add([k.pos(-805, -700), k.opacity(0)]);
       container.add([
         k.text(generalData.header.title, { font: "ibm-bold", size: 40 }),
-        k.color(k.Color.fromHex(PALETTE.color1)),
+        // Forziamo il bianco/neon per contrasto su sfondo scuro
+        k.color(k.Color.fromHex("#ffffff")), 
         k.pos(395, 0),
         k.opacity(0),
       ]);
@@ -162,7 +172,7 @@ export default async function initGame() {
           font: "ibm-bold",
           size: 20,
         }),
-        k.color(k.Color.fromHex(PALETTE.color1)),
+        k.color(k.Color.fromHex("#2de2e6")), // Sottotitolo Neon
         k.pos(400, 50),
         k.opacity(0),
       ]);
@@ -198,7 +208,7 @@ export default async function initGame() {
     }
   );
 
-  // --- SEZIONE 2: SKILLS MEMORY GAME (VERSIONE DEFINITIVA) ---
+  // --- SEZIONE 2: SKILLS MEMORY GAME (STILE TECH) ---
   makeSection(
     k,
     k.vec2(k.center().x - 400, k.center().y),
@@ -206,13 +216,12 @@ export default async function initGame() {
     (parent) => {
       const fadeContainer = parent.add([k.opacity(0), k.pos(0, 0)]);
 
-      const numPairs = 8;
+      const numPairs = 12;
       const selectedSkills = skillsData.slice(0, numPairs);
       let memoryDeck = shuffleArray([...selectedSkills, ...selectedSkills]);
       let flippedCards = [];
       let isProcessing = false;
 
-      // --- TUE DIMENSIONI ORIGINALI ---
       const cols = 4;
       const cardSize = 100;
       const gap = 20;
@@ -220,29 +229,28 @@ export default async function initGame() {
       const totalWidth = cols * (cardSize + gap);
       const totalHeight = Math.ceil(memoryDeck.length / cols) * (cardSize + gap);
 
-      // --- 1. POSIZIONAMENTO A SINISTRA (-300) ---
+      // --- TABELLONE PRINCIPALE (Stile Terminale) ---
       const consoleBoard = fadeContainer.add([
-        k.rect(totalWidth + 40, totalHeight + 40, { radius: 20 }),
-        k.pos(-300, 0), // A Sinistra
+        k.rect(totalWidth + 40, totalHeight + 40, { radius: 8 }),
+        k.pos(-300, 0), 
         k.anchor("center"),
-        k.color(k.Color.fromHex("#2c3e50")),
-        k.outline(5, k.Color.fromHex(PALETTE.color1)),
+        k.color(k.Color.fromHex("#0b0c15")), // Sfondo console scuro
+        k.outline(4, k.Color.fromHex("#2de2e6")), // Outline Neon
         k.area(),                  
-        k.body({ isStatic: true }), // Muro solido
+        k.body({ isStatic: true }),
         "game-area" 
       ]);
 
       consoleBoard.add([
-        k.text("Skills", { font: "ibm-bold", size: 32 }),
+        k.text("Skills_Memory_Game", { font: "ibm-bold", size: 32 }),
         k.anchor("center"),
         k.pos(0, -totalHeight / 2 - 40),
-        k.color(k.Color.WHITE),
+        k.color(k.Color.fromHex("#ffffff")), // Titolo Bianco
       ]);
 
       const startX = -(totalWidth / 2) + cardSize / 2;
       const startY = -(totalHeight / 2) + cardSize / 2;
 
-      // --- 2. GENERAZIONE CARTE ---
       memoryDeck.forEach((skill, index) => {
         const col = index % cols;
         const row = Math.floor(index / cols);
@@ -251,12 +259,12 @@ export default async function initGame() {
         const y = startY + row * (cardSize + gap);
 
         const card = consoleBoard.add([
-          k.rect(cardSize, cardSize, { radius: 10 }),
+          k.rect(cardSize, cardSize, { radius: 6 }),
           k.pos(x, y),
           k.anchor("center"),
           k.area(),
-          k.color(k.Color.fromHex(PALETTE.color1)),
-          k.outline(4, k.Color.fromHex(PALETTE.color1)),
+          k.color(k.Color.fromHex("#1a1b26")), // Sfondo carta scoperta (grigio scuro)
+          k.outline(2, k.Color.fromHex("#2de2e6")), // Outline sottile neon
           "memory-card",
           {
             isFlipped: false,
@@ -265,31 +273,31 @@ export default async function initGame() {
           },
         ]);
 
-        // --- TUA SCALA ORIGINALE (FISSA A 0.35) ---
         card.add([
           k.sprite(skill.logoData.name),
           k.anchor("center"),
-          k.scale(0.35), // <--- ESATTAMENTE COME VOLEVI TU
+          k.scale(0.35),
         ]);
 
-        // Retro della carta
+        // --- RETRO DELLA CARTA (Stile Code/Hacker) ---
         const cardBack = card.add([
-          k.rect(cardSize, cardSize, { radius: 10 }),
+          k.rect(cardSize, cardSize, { radius: 6 }),
           k.anchor("center"),
-          k.color(k.Color.fromHex(PALETTE.color2)),
-          k.outline(2, k.Color.fromHex(PALETTE.color3)),
+          k.color(k.Color.fromHex("#11111b")), // Molto scuro
+          k.outline(2, k.Color.fromHex("#2de2e6")), // Outline Neon
         ]);
 
         cardBack.add([
-          k.text("?", { font: "ibm-bold", size: 40 }),
+          // Simbolo codice invece del punto interrogativo
+          k.text("</>", { font: "ibm-bold", size: 28 }),
           k.anchor("center"),
-          k.color(k.Color.fromHex(PALETTE.color3)),
+          k.color(k.Color.fromHex("#2de2e6")),
+          k.opacity(0.6), // Leggermente trasparente
         ]);
 
         card.onClick(async () => {
           if (isProcessing || card.isFlipped || card.isMatched) return;
 
-          // Controllo Distanza
           const boardPos = parent.pos.add(consoleBoard.pos); 
           const player = k.get("player")[0];
           
@@ -314,7 +322,6 @@ export default async function initGame() {
               first.card.isMatched = true;
               second.card.isMatched = true;
 
-              // Rimuoviamo il punto di domanda per sempre
               first.cardBack.destroy();
               second.cardBack.destroy();
               
@@ -346,6 +353,7 @@ export default async function initGame() {
     }
   );
 
+  // --- SEZIONE 3 (Work Experience) ---
   makeSection(
     k,
     k.vec2(k.center().x + 400, k.center().y),
@@ -365,6 +373,7 @@ export default async function initGame() {
     }
   );
 
+  // --- SEZIONE 4 (Projects) ---
   makeSection(
     k,
     k.vec2(k.center().x, k.center().y + 400),

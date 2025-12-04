@@ -30,7 +30,7 @@ export default function makeProjectCard(k, parent, posVec2, data, thumbnail) {
   const cardTitle = card.add([
     k.text(data.title, {
       font: "ibm-bold",
-      size: 32,
+      size: 20,
       width: 600,
       lineSpacing: 12,
     }),
@@ -44,7 +44,7 @@ export default function makeProjectCard(k, parent, posVec2, data, thumbnail) {
     k.area(),
     k.color(k.Color.fromHex(PALETTE.color1)),
     k.pos(400, 0),
-    k.opacity(0),
+    k.opacity(0), 
   ]);
 
   cardSwitch.onCollide("player", () => {

@@ -19,15 +19,6 @@
   },
   {
     "pos": { "x": 0, "y": 0 },
-    "name": "LangSmith",
-    "logoData": {
-      "name": "langsmith-logo",
-      "width": 128,
-      "height": 128
-    }
-  },
-  {
-    "pos": { "x": 0, "y": 0 },
     "name": "LangChain",
     "logoData": {
       "name": "langchain-logo",
