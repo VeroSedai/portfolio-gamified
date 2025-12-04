@@ -8,7 +8,12 @@ import { makeAppear } from "./utils";
 import makeWorkExperienceCard from "./components/WorkExperienceCard";
 import makeEmailIcon from "./components/EmailIcon";
 import makeProjectCard from "./components/ProjectCard";
-import { cameraZoomValueAtom, store } from "./store";
+import {
+  musicVolumeAtom,
+  sfxVolumeAtom,
+  cameraZoomValueAtom,
+  store,
+} from "./store";
 
 // Funzione di utilità per mescolare l'array (Fisher-Yates shuffle)
 function shuffleArray(array) {
@@ -31,8 +36,7 @@ export default async function initGame() {
   ).json();
 
   const k = makeKaplayCtx();
-  
-  // ... (Tutto il tuo codice di caricamento sprite/font rimane uguale fino a qui) ...
+
   k.loadSprite("player", "./sprites/player.png", {
     sliceX: 4,
     sliceY: 8,
@@ -55,7 +59,7 @@ export default async function initGame() {
       "walk-right-down-idle": 28,
     },
   });
-  // ... (Caricamento loghi e shader rimane uguale) ...
+  // ... (Caricamento loghi e shader) ...
   k.loadFont("ibm-regular", "./fonts/IBMPlexSans-Regular.ttf");
   k.loadFont("ibm-bold", "./fonts/IBMPlexSans-Bold.ttf");
   k.loadSprite("github-logo", "./logos/github-logo.png");
@@ -75,6 +79,31 @@ export default async function initGame() {
   k.loadSprite("python-logo", "./logos/python-logo.png");
   k.loadSprite("email-logo", "./logos/email-logo.png");
   k.loadShaderURL("tiledPattern", null, "./shaders/tiledPattern.frag");
+
+  // Music & SFX
+  k.loadSound("bgm", "./audio/background-music.mp3");
+  k.loadSound("flip", "./audio/flip.mp3");
+    k.loadSound("match", "./audio/match.mp3");
+
+  let bgm = null;
+  let musicStarted = false;
+
+  function startBGM() {
+    if (!musicStarted) {
+      bgm = k.play("bgm", {
+        loop: true,
+        volume: store.get(musicVolumeAtom),
+      });
+      musicStarted = true;
+    }
+  }
+
+  k.onKeyPress(startBGM);
+  k.onMousePress(startBGM);
+
+  k.onUpdate(() => {
+    if (bgm) bgm.volume = store.get(musicVolumeAtom);
+  });
 
   // ... (Gestione Camera e Background rimane uguale) ...
   const setInitCamZoomValue = () => {
@@ -113,6 +142,7 @@ export default async function initGame() {
     tiledBackground.uniform.u_aspect = k.width() / k.height();
   });
 
+
   // SEZIONE 1 (Header/Socials) - Rimane invariata
   makeSection(
     k,
@@ -120,10 +150,8 @@ export default async function initGame() {
     generalData.section1Name,
     (parent) => {
       const container = parent.add([k.pos(-805, -700), k.opacity(0)]);
-        // ... (contenuto header esistente) ...
-        // Per brevità non ricopio tutto l'interno della sezione 1, è uguale al tuo codice originale
-       container.add([
-        k.text(generalData.header.title, { font: "ibm-bold", size: 88 }),
+      container.add([
+        k.text(generalData.header.title, { font: "ibm-bold", size: 40 }),
         k.color(k.Color.fromHex(PALETTE.color1)),
         k.pos(395, 0),
         k.opacity(0),
@@ -132,10 +160,10 @@ export default async function initGame() {
       container.add([
         k.text(generalData.header.subtitle, {
           font: "ibm-bold",
-          size: 48,
+          size: 20,
         }),
         k.color(k.Color.fromHex(PALETTE.color1)),
-        k.pos(485, 100),
+        k.pos(400, 50),
         k.opacity(0),
       ]);
 
@@ -170,50 +198,51 @@ export default async function initGame() {
     }
   );
 
-// --- SEZIONE 2: SKILLS MEMORY GAME ---
-makeSection(
+  // --- SEZIONE 2: SKILLS MEMORY GAME (VERSIONE DEFINITIVA) ---
+  makeSection(
     k,
     k.vec2(k.center().x - 400, k.center().y),
     generalData.section2Name,
     (parent) => {
-      const container = parent.add([
-        k.opacity(0),
-        k.pos(0, 0),
-      ]);
+      const fadeContainer = parent.add([k.opacity(0), k.pos(0, 0)]);
 
-      const numPairs = 8; 
+      const numPairs = 8;
       const selectedSkills = skillsData.slice(0, numPairs);
-      
-      let memoryDeck = [...selectedSkills, ...selectedSkills];
-      memoryDeck = shuffleArray(memoryDeck);
+      let memoryDeck = shuffleArray([...selectedSkills, ...selectedSkills]);
+      let flippedCards = [];
+      let isProcessing = false;
 
-      let flippedCards = []; 
-      let isProcessing = false; 
-
+      // --- TUE DIMENSIONI ORIGINALI ---
       const cols = 4;
       const cardSize = 100;
       const gap = 20;
       
-      // Calcolo dimensioni totali griglia
       const totalWidth = cols * (cardSize + gap);
       const totalHeight = Math.ceil(memoryDeck.length / cols) * (cardSize + gap);
 
-      const startX = -(totalWidth / 2) + cardSize / 2; 
-      const startY = -200; 
-
-      // --- FIX MOVIMENTO: Barriera invisibile ---
-      // Creiamo un rettangolo fisico sotto la prima riga di carte per fermare il player
-      parent.add([
-        k.rect(totalWidth + 40, 20), // Largo quanto la griglia + un po' di margine
-        k.area(),
-        k.body({ isStatic: true }), // Il player ci sbatterà contro
-        k.pos(0, startY + totalHeight - 80), // Posizionato al bordo inferiore delle carte
-        k.opacity(0), // Invisibile
+      // --- 1. POSIZIONAMENTO A SINISTRA (-300) ---
+      const consoleBoard = fadeContainer.add([
+        k.rect(totalWidth + 40, totalHeight + 40, { radius: 20 }),
+        k.pos(-300, 0), // A Sinistra
         k.anchor("center"),
-        "wall"
+        k.color(k.Color.fromHex("#2c3e50")),
+        k.outline(5, k.Color.fromHex(PALETTE.color1)),
+        k.area(),                  
+        k.body({ isStatic: true }), // Muro solido
+        "game-area" 
       ]);
-      // ------------------------------------------
 
+      consoleBoard.add([
+        k.text("Skills", { font: "ibm-bold", size: 32 }),
+        k.anchor("center"),
+        k.pos(0, -totalHeight / 2 - 40),
+        k.color(k.Color.WHITE),
+      ]);
+
+      const startX = -(totalWidth / 2) + cardSize / 2;
+      const startY = -(totalHeight / 2) + cardSize / 2;
+
+      // --- 2. GENERAZIONE CARTE ---
       memoryDeck.forEach((skill, index) => {
         const col = index % cols;
         const row = Math.floor(index / cols);
@@ -221,7 +250,7 @@ makeSection(
         const x = startX + col * (cardSize + gap);
         const y = startY + row * (cardSize + gap);
 
-        const card = container.add([
+        const card = consoleBoard.add([
           k.rect(cardSize, cardSize, { radius: 10 }),
           k.pos(x, y),
           k.anchor("center"),
@@ -236,42 +265,43 @@ makeSection(
           },
         ]);
 
-        // --- FIX GRAFICO: Scala ridotta ---
-        // Le immagini originali sono grandi (es. 128px o più). 
-        // La carta è 100px. Impostiamo scale a 0.3 o 0.35 per stare larghi.
+        // --- TUA SCALA ORIGINALE (FISSA A 0.35) ---
         card.add([
-            k.sprite(skill.logoData.name), 
-            k.anchor("center"),
-            k.scale(0.35), // <--- MODIFICATO: Era 0.5, ora 0.35 per farle stare dentro
+          k.sprite(skill.logoData.name),
+          k.anchor("center"),
+          k.scale(0.35), // <--- ESATTAMENTE COME VOLEVI TU
         ]);
-        // ----------------------------------
 
+        // Retro della carta
         const cardBack = card.add([
           k.rect(cardSize, cardSize, { radius: 10 }),
           k.anchor("center"),
           k.color(k.Color.fromHex(PALETTE.color2)),
           k.outline(2, k.Color.fromHex(PALETTE.color3)),
         ]);
-        
+
         cardBack.add([
-            k.text("?", { font: "ibm-bold", size: 40 }),
-            k.anchor("center"),
-            k.color(k.Color.fromHex(PALETTE.color3))
+          k.text("?", { font: "ibm-bold", size: 40 }),
+          k.anchor("center"),
+          k.color(k.Color.fromHex(PALETTE.color3)),
         ]);
 
         card.onClick(async () => {
           if (isProcessing || card.isFlipped || card.isMatched) return;
 
-          // Controlliamo la distanza del player per permettere il click solo se vicino
+          // Controllo Distanza
+          const boardPos = parent.pos.add(consoleBoard.pos); 
           const player = k.get("player")[0];
+          
           if (player) {
-             const dist = player.pos.dist(parent.pos.add(card.pos));
-             if (dist > 400) return; // Se sei troppo lontano non clicca
+             const dist = player.pos.dist(boardPos);
+             if (dist > 600) return; 
           }
+
+          k.play("flip", { volume: store.get(sfxVolumeAtom) || 0.5 });
 
           card.isFlipped = true;
           cardBack.opacity = 0;
-          
           flippedCards.push({ card, cardBack });
 
           if (flippedCards.length === 2) {
@@ -279,8 +309,14 @@ makeSection(
             const [first, second] = flippedCards;
 
             if (first.card.skillName === second.card.skillName) {
+              // --- MATCH ---
+              k.play("match", { volume: store.get(sfxVolumeAtom) || 0.5 });
               first.card.isMatched = true;
               second.card.isMatched = true;
+
+              // Rimuoviamo il punto di domanda per sempre
+              first.cardBack.destroy();
+              second.cardBack.destroy();
               
               first.card.use(k.scale(1.1));
               second.card.use(k.scale(1.1));
@@ -291,10 +327,11 @@ makeSection(
               flippedCards = [];
               isProcessing = false;
             } else {
+              // --- NO MATCH ---
               await k.wait(1);
+              if (first.cardBack) first.cardBack.opacity = 1;
+              if (second.cardBack) second.cardBack.opacity = 1;
               
-              first.cardBack.opacity = 1;
-              second.cardBack.opacity = 1;
               first.card.isFlipped = false;
               second.card.isFlipped = false;
 
@@ -305,11 +342,10 @@ makeSection(
         });
       });
 
-      makeAppear(k, container);
+      makeAppear(k, fadeContainer);
     }
   );
 
-  // ... (Il resto delle sezioni e makePlayer rimane uguale) ...
   makeSection(
     k,
     k.vec2(k.center().x + 400, k.center().y),
@@ -328,7 +364,7 @@ makeSection(
       makeAppear(k, container);
     }
   );
-  
+
   makeSection(
     k,
     k.vec2(k.center().x, k.center().y + 400),

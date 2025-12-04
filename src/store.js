@@ -13,6 +13,9 @@ export const chosenProjectDataAtom = atom({
   links: [{ id: 0, name: "", link: "" }],
 });
 
+export const musicVolumeAtom = atom(0.15);
+export const sfxVolumeAtom = atom(1);
+
 export const cameraZoomValueAtom = atom({ value: 1 });
 
 export const store = createStore();

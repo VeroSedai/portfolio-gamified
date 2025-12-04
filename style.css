@@ -1,12 +1,16 @@
 /*
-  1. Use a more-intuitive box-sizing model.
+  PORTFOLIO GAME STYLE - CYBERPUNK THEME
+  Design aggiornato per migliore contrasto e stile "Tech"
 */
+
+/* 1. Reset e Box Sizing */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
+/* 2. Fonts */
 @font-face {
   font-family: "ibm-bold";
   src: url(/fonts/IBMPlexSans-Bold.ttf);
@@ -17,15 +21,25 @@
   src: url(/fonts/IBMPlexSans-Regular.ttf);
 }
 
+/* 3. Variabili Colore (Palette Dark Mode) */
 :root {
   font-family: "ibm-bold";
   font-size: 1em;
-  --color1: #272946;
-  --color2: #aaea6c;
-  --color3: #e7ffee;
-  --color4: #3f416c;
+
+  /* COLOR 1: Sfondo principale (Blu Notte Profondo / Quasi Nero) */
+  --color1: #0b0c15; 
+  
+  /* COLOR 2: Accento Principale (Verde Neon per bordi, testo, bottoni) */
+  --color2: #39ff14; 
+  
+  /* COLOR 3: Testo Chiaro (Bianco Ghiaccio per leggibilità) */
+  --color3: #f0f0f5;
+  
+  /* COLOR 4: Sfondo Pannelli (Semi-trasparente scuro) */
+  --color4: rgba(20, 25, 40, 0.95);
 }
 
+/* 4. Stili Base */
 body,
 html {
   height: 100vh;
@@ -33,98 +47,174 @@ html {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: var(--color1);
+  background-color: var(--color1); /* Sfondo di fallback se lo shader non carica */
+  color: var(--color3); /* Testo base bianco */
+  overflow: hidden; /* Evita scrollbar indesiderate */
 }
 
+/* 5. Modale (Finestre di Dialogo) */
 .modal {
   display: flex;
   justify-content: center;
   align-items: center;
   position: fixed;
   top: 0;
-  z-index: 1;
+  left: 0;
+  z-index: 10; /* Z-index alto per stare sopra al canvas */
   width: 100%;
   height: 100%;
   overflow: auto;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(4px); /* Sfocatura sfondo dietro la modale */
+  background-color: rgba(0, 0, 0, 0.6); /* Oscura leggermente il gioco */
 }
 
 .modal-content {
-  background-color: var(--color2);
-  border-color: var(--color1);
-  border-style: solid;
-  margin: 15% auto;
-  border-radius: 5px;
-  padding: 20px;
+  background-color: var(--color4);
+  
+  /* Bordo Neon */
+  border: 2px solid var(--color2);
+  box-shadow: 0 0 15px rgba(57, 255, 20, 0.2); /* Alone luminoso */
+  
+  margin: auto;
+  border-radius: 8px; /* Angoli leggermente smussati */
+  padding: 30px;
+  width: 90%;
   max-width: 500px;
-  overflow: auto;
+  text-align: center;
+  position: relative;
 }
 
+/* Tipografia dentro la modale */
+.modal-content > h1 {
+  color: var(--color2);
+  font-family: "ibm-bold";
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-top: 0;
+  border-bottom: 1px solid var(--color2);
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+}
+
+.modal-content > p, 
+.modal-content span {
+  font-family: "ibm-regular";
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--color3);
+}
+
+/* 6. Bottoni della Modale */
 .modal-btn-container {
   display: flex;
   flex-direction: column;
+  gap: 15px;
+  margin-top: 25px;
 }
 
 .modal-btn {
   font: inherit;
-  font-size: 1.5rem;
-  margin-top: 1vh;
-  min-height: 5vh;
-  max-height: 10vh;
-  background-color: var(--color1);
-  border-color: var(--color2);
-  border-radius: 5px;
+  font-family: "ibm-bold";
+  font-size: 1.2rem;
+  padding: 15px;
+  cursor: pointer;
+  
+  /* Stile Outline (Solo bordo) */
+  background-color: transparent;
   color: var(--color2);
-  border: none;
+  border: 2px solid var(--color2);
+  border-radius: 6px;
+  
+  text-transform: uppercase;
+  transition: all 0.2s ease-in-out; /* Animazione fluida */
+}
+
+/* Effetto Hover sui bottoni */
+.modal-btn:hover {
+  background-color: var(--color2);
+  color: var(--color1); /* Il testo diventa scuro su sfondo verde */
+  box-shadow: 0 0 15px var(--color2); /* Glow intenso */
+  transform: translateY(-2px); /* Si alza leggermente */
 }
 
 .modal-btn:active {
-  background-color: var(--color4);
+  transform: translateY(0);
+  opacity: 0.8;
 }
 
-.modal-content > h1,
-span,
-p {
-  color: var(--color1);
-}
-
-.modal-content > p {
-  font-family: "ibm-regular";
-  font-size: 1.2rem;
-  font-style: italic;
-}
-
+/* 7. Controller Camera (Mobile/UI) */
 .camera-controller {
   display: flex;
   position: fixed;
   top: 5vh;
   right: 5vw;
-  z-index: 1;
-  gap: 1vh;
+  z-index: 5;
+  gap: 10px;
 }
 
 .camera-controller-btn {
   color: var(--color2);
-  background-color: var(--color1);
-  border: var(--color1);
-  border-style: solid;
-  border-radius: 12px;
-  font-size: 2rem;
-  width: 12vw;
-  opacity: 0.4;
+  background-color: rgba(0, 0, 0, 0.5); /* Sfondo semitrasparente */
+  border: 2px solid var(--color2);
+  border-radius: 8px;
+  font-size: 1.5rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity 0.2s;
 }
 
+.camera-controller-btn:hover,
 .camera-controller-btn:active {
   opacity: 1;
+  background-color: var(--color2);
+  color: var(--color1);
+}
+
+/* 8. Messaggi a schermo (UI) */
+.controls-message,
+.cp-message {
+  position: fixed;
+  left: 5vw;
+  z-index: 5;
+  font-family: "ibm-regular";
+  color: var(--color2); /* Testo verde per essere leggibile su scuro */
+  opacity: 0.7;
+  max-width: 40vw;
+  user-select: none;
+  text-shadow: 0 0 5px rgba(0,0,0,0.8); /* Ombra per staccare dallo sfondo */
 }
 
 .controls-message {
-  position: fixed;
-  color: var(--color1);
   top: 3vh;
-  left: 5vw;
-  opacity: 0.4;
-  font-size: 1.2rem;
-  max-width: 40vw;
-  user-select: none;
+  font-size: 1rem;
+}
+
+.cp-message {
+  bottom: 3vh;
+  font-size: 0.8rem;
+}
+
+/* 9. Controllo Musica */
+.music-control {
+  position: fixed;
+  bottom: 2vh;      
+  right: 2vw;  
+  z-index: 5;       
+  padding: 10px;  
+  background: var(--color4);
+  border: 1px solid var(--color2);
+  border-radius: 8px;
+  color: var(--color2);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.music-control:hover {
+  box-shadow: 0 0 10px var(--color2);
 }
