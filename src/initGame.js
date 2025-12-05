@@ -1,6 +1,7 @@
 import makeKaplayCtx from "./kaplayCtx";
 import makePlayer from "./entities/Player";
 import makeSection from "./components/Section";
+
 import {
   musicVolumeAtom,
   cameraZoomValueAtom,
@@ -13,12 +14,12 @@ import {
   projectsDataAtom,
   isAboutModalVisibleAtom, 
   aboutDataAtom,
-  socialsDataAtom 
+  socialsDataAtom,
+  themeAtom
 } from "./store";
 
 export default async function initGame() {
   // --- 1. DATA LOADING ---
-  // Load all configuration files
   const theme = await (await fetch("./configs/theme.json")).json();
   const aboutData = await (await fetch("./configs/aboutData.json")).json();
   const layoutData = await (await fetch("./configs/layoutData.json")).json(); 
@@ -30,19 +31,18 @@ export default async function initGame() {
   const projectsData = await (await fetch("./configs/projectsData.json")).json();
 
   // --- 2. THEME SETUP ---
-  // Apply theme colors to CSS variables for React UI
   const root = document.documentElement;
   root.style.setProperty("--color1", theme.colors.background); 
   root.style.setProperty("--color2", theme.colors.primary);    
   root.style.setProperty("--color3", theme.colors.text);       
 
   // --- 3. STORE INITIALIZATION ---
-  // Store data for React Modals
   store.set(skillsDataAtom, skillsData);
   store.set(workExperienceDataAtom, experiencesData);
   store.set(projectsDataAtom, projectsData);
   store.set(aboutDataAtom, aboutData); 
-  store.set(socialsDataAtom, socialsData); 
+  store.set(socialsDataAtom, socialsData);
+  store.set(themeAtom, theme); // <--- SALVIAMO IL TEMA NELLO STORE
 
   const k = makeKaplayCtx();
 
@@ -58,32 +58,54 @@ export default async function initGame() {
   socialsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `./logos/${s.logoData.name}.png`));
   projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `./projects/${p.thumbnail}.png`));
 
-  // --- 4b. LOAD PLAYER SPRITE (From playerData.json) ---
+// --- 4b. LOAD PLAYER SPRITE (From playerData.json) ---
   k.loadSprite("player", `./sprites/${playerData.sprite}.png`, {
     sliceX: playerData.sliceX,
     sliceY: playerData.sliceY,
     anims: playerData.anims,
   });
 
-  // Load Core Assets
+// Load Core Assets
   k.loadFont("ibm-regular", "./fonts/IBMPlexSans-Regular.ttf");
   k.loadFont("ibm-bold", "./fonts/IBMPlexSans-Bold.ttf");
   k.loadShaderURL("tiledPattern", null, "./shaders/tiledPattern.frag");
   
-  k.loadSound("bgm", "./audio/background-music.mp3");
-  k.loadSound("flip", "./audio/flip.mp3");
-  k.loadSound("match", "./audio/match.mp3");
+  // Audio Loading (Kaplay side)
+  if (theme.audio && theme.audio.playlist) {
+    theme.audio.playlist.forEach((trackName) => {
+      k.loadSound(trackName, `./audio/${trackName}`);
+    });
+  }
+  
+  // Background Loading
+  if (theme.background && theme.background.type === "image") {
+    k.loadSprite(theme.background.asset, `./backgrounds/${theme.background.asset}.png`); 
+  }
 
   // --- 5. AUDIO SYSTEM ---
+  let currentTrackIndex = 0;
   let bgm = null;
   let musicStarted = false;
 
   function startBGM() {
-    if (!musicStarted) {
+    if (!musicStarted && theme.audio?.enabled && theme.audio?.playlist?.length > 0) {
       if (k.audioCtx && k.audioCtx.state === "suspended") k.audioCtx.resume();
-      bgm = k.play("bgm", { loop: true, volume: store.get(musicVolumeAtom) });
+      playTrack(currentTrackIndex);
       musicStarted = true;
     }
+  }
+
+  function playTrack(index) {
+    if (bgm) bgm.stop();
+    const trackName = theme.audio.playlist[index];
+    bgm = k.play(trackName, { 
+        loop: false, 
+        volume: store.get(musicVolumeAtom) 
+    });
+    bgm.onEnd(() => {
+        currentTrackIndex = (currentTrackIndex + 1) % theme.audio.playlist.length;
+        playTrack(currentTrackIndex);
+    });
   }
 
   k.onKeyPress(startBGM);
@@ -94,7 +116,6 @@ export default async function initGame() {
 
   // --- 6. PLAYER PAUSE LOGIC ---
   k.onUpdate(() => {
-    // Check if any modal is open
     const isSkills = store.get(isSkillsModalVisibleAtom);
     const isWork = store.get(isWorkExperienceModalVisibleAtom);
     const isProj = store.get(isProjectGalleryVisibleAtom);
@@ -125,29 +146,47 @@ export default async function initGame() {
     if (val !== k.camScale().x) k.camScale(k.vec2(val));
   });
 
-  // --- 8. SHADER ---
-  const tiledBackground = k.add([
-    k.uvquad(k.width(), k.height()),
-    k.shader("tiledPattern", () => ({
-      u_time: k.time() / 15,
-      u_color1: k.Color.fromHex(theme.colors.background), 
-      u_color2: k.Color.fromHex(theme.colors.primary),    
-      u_speed: k.vec2(0.3, -0.3),
-      u_aspect: k.width() / k.height(),
-      u_size: 10,
-    })),
-    k.pos(0, 0),
-    k.fixed(),
-  ]);
-  tiledBackground.onUpdate(() => {
-    tiledBackground.width = k.width();
-    tiledBackground.height = k.height();
-    tiledBackground.uniform.u_aspect = k.width() / k.height();
-  });
+  // --- 8. DYNAMIC BACKGROUND RENDER ---
+  const bgConfig = theme.background || { type: "shader", asset: "tiledPattern", shaderParams: {} };
+  let backgroundObj;
+
+  if (bgConfig.type === "image") {
+    backgroundObj = k.add([
+        k.sprite(bgConfig.asset, { tiled: true, width: k.width(), height: k.height() }),
+        k.pos(0, 0),
+        k.fixed(),
+        k.z(-100) 
+    ]);
+    backgroundObj.onUpdate(() => {
+        backgroundObj.width = k.width();
+        backgroundObj.height = k.height();
+    });
+  } else {
+    const sp = bgConfig.shaderParams || {};
+    backgroundObj = k.add([
+      k.uvquad(k.width(), k.height()),
+      k.shader(bgConfig.asset || "tiledPattern", () => ({
+        u_time: k.time() / 15,
+        u_color1: k.Color.fromHex(theme.colors.background), 
+        u_color2: k.Color.fromHex(theme.colors.primary),    
+        u_speed: k.vec2(sp.speedX || 0.3, sp.speedY || -0.3),
+        u_aspect: k.width() / k.height(),
+        u_size: sp.size || 10,
+      })),
+      k.pos(0, 0),
+      k.fixed(),
+      k.z(-100)
+    ]);
+    backgroundObj.onUpdate(() => {
+      backgroundObj.width = k.width();
+      backgroundObj.height = k.height();
+      backgroundObj.uniform.u_aspect = k.width() / k.height();
+    });
+  }
 
   // --- 9. DYNAMIC SECTIONS GENERATION ---
   
-  // Mapping JSON IDs to React Atoms
+// Mapping JSON IDs to React Atoms
   const atomMap = {
     "about": isAboutModalVisibleAtom,
     "skills": isSkillsModalVisibleAtom,
@@ -155,16 +194,13 @@ export default async function initGame() {
     "projects": isProjectGalleryVisibleAtom
   };
 
-  // Iterate over layoutData from JSON
+// Iterate over layoutData from JSON
   if (layoutData.sections) {
     layoutData.sections.forEach(config => {
       
-      // Resolve color from theme key
       const colorHex = theme.colors[config.colorKey] || theme.colors.primary;
       const targetAtom = atomMap[config.id];
-
-      // All portals allow reopening (triggerOnce = false)
-      const triggerOnce = false;
+      const triggerOnce = false; 
 
       makeSection(
         k,
@@ -173,17 +209,11 @@ export default async function initGame() {
         config.icon,
         colorHex,
         (sectionObj) => {
-          
-          // Open Modal
-          if (targetAtom) {
-            store.set(targetAtom, true);
-          }
+          if (targetAtom) store.set(targetAtom, true);
 
-          // Special handling for "About" Header (Text on Map)
           if (config.type === "special_about") {
              if (sectionObj.hasDrawnContent) return;
              sectionObj.hasDrawnContent = true;
-
              sectionObj.add([
                 k.text(aboutData.header.title, { font: "ibm-bold", size: 30 }),
                 k.color(k.Color.fromHex(theme.colors.text)),

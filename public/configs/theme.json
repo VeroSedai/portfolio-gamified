@@ -18,5 +18,15 @@
         "speedY": -0.3,
         "size": 10
       }
+    },
+    "audio": {
+      "enabled": true,
+      "playlist": [
+        "background-music.mp3" 
+      ],
+      "sfx": {
+        "flip": "flip.mp3",
+        "match": "match.mp3"
+      }
     }
   }
