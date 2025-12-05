@@ -14,3 +14,10 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+
+## CREDITS
+
+Player character asset is a slightly modified version of the asset hosted here :  https://gibbongl.itch.io/8-directional-gameboy-character-template
+Sound Effect by u_y3wk5ympz8, Shiden Beats Music and Maksym Malko from Pixabay
+Prject inspired by JSLegendDev https://github.com/JSLegendDev

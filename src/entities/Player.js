@@ -62,9 +62,6 @@ export default function makePlayer(k, posVec2, speed) {
 
     player.direction = k.vec2(0, 0);
     const worldMousePos = k.toWorld(k.mousePos());
-
-    // Controlliamo se il mouse è sopra il gioco (cerchiamo il tag "game-area")
-    // Se stiamo "hoverando" l'area di gioco, NON muovere il player.
     const isHoveringGame = k.get("game-area").some((obj) => obj.isHovering());
 
     if (isMouseDown && !isHoveringGame) { 
