@@ -1,8 +1,7 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react"; // remove if you're not using react
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
+// https://vite.dev/config/
 export default defineConfig({
-  base: "/GAME-PORTFOLIO",
-  plugins: [react()], // remove if you're not using react
-});
+  plugins: [react()],
+})

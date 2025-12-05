@@ -18,4 +18,7 @@ export const sfxVolumeAtom = atom(1);
 
 export const cameraZoomValueAtom = atom({ value: 1 });
 
+export const isSkillsModalVisibleAtom = atom(false);
+export const skillsDataAtom = atom([]);
+
 export const store = createStore();

@@ -3,6 +3,7 @@ import SocialModal from "./reactComponents/SocialModal";
 import EmailModal from "./reactComponents/EmailModal";
 import ProjectModal from "./reactComponents/ProjectModal";
 import VolumeControl from "./reactComponents/VolumeControl";
+import SkillsModal from "./reactComponents/SkillsModal";
 
 export default function ReactUI() {
   return (
@@ -13,6 +14,7 @@ export default function ReactUI() {
       <SocialModal />
       <EmailModal />
       <ProjectModal />
+      <SkillsModal />
       <VolumeControl />
     </>
   );
