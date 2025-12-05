@@ -9,5 +9,14 @@
       "quaternary": "#bd93f9",
       "cardBackground": "#1a1b26",
       "cardBack": "#11111b"
+    },
+    "background": {
+      "type": "shader",
+      "asset": "tiledPattern",
+      "shaderParams": {
+        "speedX": 0.3,
+        "speedY": -0.3,
+        "size": 10
+      }
     }
   }
