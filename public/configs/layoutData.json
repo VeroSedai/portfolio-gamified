@@ -1,0 +1,36 @@
+{
+    "sections": [
+      {
+        "id": "about",
+        "title": "About",
+        "position": { "x": 0, "y": -400 },
+        "icon": "☺",
+        "colorKey": "quaternary",
+        "type": "special_about"
+      },
+      {
+        "id": "skills",
+        "title": "Skills",
+        "position": { "x": -400, "y": 0 },
+        "icon": "</>",
+        "colorKey": "secondary",
+        "type": "modal"
+      },
+      {
+        "id": "work",
+        "title": "Experience",
+        "position": { "x": 400, "y": 0 },
+        "icon": "💼",
+        "colorKey": "primary",
+        "type": "modal"
+      },
+      {
+        "id": "projects",
+        "title": "Projects",
+        "position": { "x": 0, "y": 400 },
+        "icon": "🚀",
+        "colorKey": "tertiary",
+        "type": "modal"
+      }
+    ]
+  }
