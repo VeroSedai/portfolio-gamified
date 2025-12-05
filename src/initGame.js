@@ -4,6 +4,7 @@ import makeSection from "./components/Section";
 
 import {
   musicVolumeAtom,
+  sfxVolumeAtom,
   cameraZoomValueAtom,
   store,
   isSkillsModalVisibleAtom,
@@ -15,34 +16,48 @@ import {
   isAboutModalVisibleAtom, 
   aboutDataAtom,
   socialsDataAtom,
+  sfxTriggerAtom,
   themeAtom
 } from "./store";
 
+// Helper for safe fetching
+const safeFetch = async (path) => {
+  try {
+    const response = await fetch(path);
+    if (!response.ok) throw new Error(`File missing: ${path}`);
+    return await response.json();
+  } catch (e) {
+    console.error(`JSON Error ${path}:`, e);
+    return {}; // Return empty object to prevent crash
+  }
+};
+
 export default async function initGame() {
   // --- 1. DATA LOADING ---
-  const theme = await (await fetch("./configs/theme.json")).json();
-  const aboutData = await (await fetch("./configs/aboutData.json")).json();
-  const layoutData = await (await fetch("./configs/layoutData.json")).json(); 
-  const playerData = await (await fetch("./configs/playerData.json")).json(); 
+  const theme = await safeFetch("./configs/theme.json");
+  const aboutData = await safeFetch("./configs/aboutData.json"); // <--- Renamed from generalData
+  const layoutData = await safeFetch("./configs/layoutData.json"); 
+  const playerData = await safeFetch("./configs/playerData.json"); 
   
-  const skillsData = await (await fetch("./configs/skillsData.json")).json();
-  const socialsData = await (await fetch("./configs/socialsData.json")).json();
-  const experiencesData = await (await fetch("./configs/experiencesData.json")).json();
-  const projectsData = await (await fetch("./configs/projectsData.json")).json();
+  const skillsData = await safeFetch("./configs/skillsData.json");
+  const socialsData = await safeFetch("./configs/socialsData.json");
+  const experiencesData = await safeFetch("./configs/experiencesData.json");
+  const projectsData = await safeFetch("./configs/projectsData.json");
 
   // --- 2. THEME SETUP ---
   const root = document.documentElement;
-  root.style.setProperty("--color1", theme.colors.background); 
-  root.style.setProperty("--color2", theme.colors.primary);    
-  root.style.setProperty("--color3", theme.colors.text);       
+  // Default fallbacks if theme colors are missing
+  root.style.setProperty("--color1", theme.colors?.background || "#0b0c15"); 
+  root.style.setProperty("--color2", theme.colors?.primary || "#2de2e6");    
+  root.style.setProperty("--color3", theme.colors?.text || "#ffffff");       
 
   // --- 3. STORE INITIALIZATION ---
   store.set(skillsDataAtom, skillsData);
   store.set(workExperienceDataAtom, experiencesData);
   store.set(projectsDataAtom, projectsData);
-  store.set(aboutDataAtom, aboutData); 
-  store.set(socialsDataAtom, socialsData);
-  store.set(themeAtom, theme); // <--- SALVIAMO IL TEMA NELLO STORE
+  store.set(aboutDataAtom, aboutData); // <--- Store variable updated
+  store.set(socialsDataAtom, socialsData); 
+  store.set(themeAtom, theme); 
 
   const k = makeKaplayCtx();
 
@@ -54,33 +69,42 @@ export default async function initGame() {
     loadedAssets.add(name);
   };
 
-  skillsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `./logos/${s.logoData.name}.png`));
-  socialsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `./logos/${s.logoData.name}.png`));
-  projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `./projects/${p.thumbnail}.png`));
+  // Load Sprites
+  if (Array.isArray(skillsData)) skillsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `./logos/${s.logoData.name}.png`));
+  if (Array.isArray(socialsData)) socialsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `./logos/${s.logoData.name}.png`));
+  if (Array.isArray(projectsData)) projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `./projects/${p.thumbnail}.png`));
 
-// --- 4b. LOAD PLAYER SPRITE (From playerData.json) ---
-  k.loadSprite("player", `./sprites/${playerData.sprite}.png`, {
-    sliceX: playerData.sliceX,
-    sliceY: playerData.sliceY,
-    anims: playerData.anims,
+  // Load Player Sprite
+  const spriteName = playerData.sprite || "player";
+  k.loadSprite("player", `./sprites/${spriteName}.png`, {
+    sliceX: playerData.sliceX || 4,
+    sliceY: playerData.sliceY || 8,
+    anims: playerData.anims || { "walk-down-idle": 0 },
   });
 
-// Load Core Assets
+  // Load Fonts & Shader
   k.loadFont("ibm-regular", "./fonts/IBMPlexSans-Regular.ttf");
   k.loadFont("ibm-bold", "./fonts/IBMPlexSans-Bold.ttf");
   k.loadShaderURL("tiledPattern", null, "./shaders/tiledPattern.frag");
   
-  // Audio Loading (Kaplay side)
-  if (theme.audio && theme.audio.playlist) {
-    theme.audio.playlist.forEach((trackName) => {
-      k.loadSound(trackName, `./audio/${trackName}`);
-    });
-  }
+  // --- AUDIO LOADING (FIXED PATHS) ---
+  // We use absolute paths /audio/ to avoid issues with relative resolution
   
-  // Background Loading
-  if (theme.background && theme.background.type === "image") {
-    k.loadSprite(theme.background.asset, `./backgrounds/${theme.background.asset}.png`); 
+  // 1. SFX (Defaults + Dynamic)
+  k.loadSound("flip", "/audio/flip.mp3");
+  k.loadSound("match", "/audio/match.mp3");
+  
+  if (theme.audio && theme.audio.sfx) {
+    for (const [key, filename] of Object.entries(theme.audio.sfx)) {
+      k.loadSound(key, `/audio/${filename}`);
+    }
   }
+
+  // 2. Playlist (BGM)
+  const playlist = theme.audio?.playlist || ["background-music.mp3"]; // Fallback default
+  playlist.forEach((trackName) => {
+    k.loadSound(trackName, `/audio/${trackName}`);
+  });
 
   // --- 5. AUDIO SYSTEM ---
   let currentTrackIndex = 0;
@@ -88,33 +112,59 @@ export default async function initGame() {
   let musicStarted = false;
 
   function startBGM() {
-    if (!musicStarted && theme.audio?.enabled && theme.audio?.playlist?.length > 0) {
-      if (k.audioCtx && k.audioCtx.state === "suspended") k.audioCtx.resume();
-      playTrack(currentTrackIndex);
-      musicStarted = true;
+    if (musicStarted) return;
+    
+    // Attempt to unlock Audio Context
+    if (k.audioCtx && k.audioCtx.state === "suspended") {
+        k.audioCtx.resume();
+    }
+    
+    if (playlist.length > 0) {
+        playTrack(currentTrackIndex);
+        musicStarted = true;
     }
   }
 
   function playTrack(index) {
     if (bgm) bgm.stop();
-    const trackName = theme.audio.playlist[index];
-    bgm = k.play(trackName, { 
-        loop: false, 
-        volume: store.get(musicVolumeAtom) 
-    });
-    bgm.onEnd(() => {
-        currentTrackIndex = (currentTrackIndex + 1) % theme.audio.playlist.length;
-        playTrack(currentTrackIndex);
-    });
+    const trackName = playlist[index];
+    
+    // Check if sound loaded successfully before playing to avoid errors
+    try {
+        bgm = k.play(trackName, { 
+            loop: false, 
+            volume: store.get(musicVolumeAtom) 
+        });
+
+        bgm.onEnd(() => {
+            currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+            playTrack(currentTrackIndex);
+        });
+    } catch (e) {
+        console.warn("Could not play track:", trackName, e);
+    }
   }
 
+  // Inputs to start audio
   k.onKeyPress(startBGM);
   k.onMousePress(startBGM);
   k.onTouchStart(startBGM); 
   k.onTouchEnd(startBGM);   
   k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
 
-  // --- 6. PLAYER PAUSE LOGIC ---
+  // --- 5b. SFX BRIDGE (React -> Kaplay) ---
+  store.sub(sfxTriggerAtom, () => {
+    const sfx = store.get(sfxTriggerAtom);
+    if (sfx && sfx.name) {
+       try {
+         k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
+       } catch (e) {
+         console.warn("SFX error:", e);
+       }
+    }
+  });
+
+  // --- 6. PLAYER PAUSE & CAMERA ---
   k.onUpdate(() => {
     const isSkills = store.get(isSkillsModalVisibleAtom);
     const isWork = store.get(isWorkExperienceModalVisibleAtom);
@@ -135,7 +185,6 @@ export default async function initGame() {
     }
   });
 
-  // --- 7. CAMERA ---
   const setInitCamZoomValue = () => {
     if (k.width() < 1000) { k.camScale(k.vec2(0.5)); store.set(cameraZoomValueAtom, 0.5); return; }
     k.camScale(k.vec2(0.8)); store.set(cameraZoomValueAtom, 0.8);
@@ -146,47 +195,37 @@ export default async function initGame() {
     if (val !== k.camScale().x) k.camScale(k.vec2(val));
   });
 
-  // --- 8. DYNAMIC BACKGROUND RENDER ---
-  const bgConfig = theme.background || { type: "shader", asset: "tiledPattern", shaderParams: {} };
-  let backgroundObj;
-
+  // --- 8. BACKGROUND SHADER ---
+  const bgConfig = theme.background || { type: "shader", asset: "tiledPattern" };
+  
   if (bgConfig.type === "image") {
-    backgroundObj = k.add([
+    const bg = k.add([
         k.sprite(bgConfig.asset, { tiled: true, width: k.width(), height: k.height() }),
-        k.pos(0, 0),
-        k.fixed(),
-        k.z(-100) 
+        k.pos(0, 0), k.fixed(), k.z(-100) 
     ]);
-    backgroundObj.onUpdate(() => {
-        backgroundObj.width = k.width();
-        backgroundObj.height = k.height();
-    });
+    bg.onUpdate(() => { bg.width = k.width(); bg.height = k.height(); });
   } else {
     const sp = bgConfig.shaderParams || {};
-    backgroundObj = k.add([
+    const bg = k.add([
       k.uvquad(k.width(), k.height()),
       k.shader(bgConfig.asset || "tiledPattern", () => ({
         u_time: k.time() / 15,
-        u_color1: k.Color.fromHex(theme.colors.background), 
-        u_color2: k.Color.fromHex(theme.colors.primary),    
+        u_color1: k.Color.fromHex(theme.colors?.background || "#000"), 
+        u_color2: k.Color.fromHex(theme.colors?.primary || "#0f0"),    
         u_speed: k.vec2(sp.speedX || 0.3, sp.speedY || -0.3),
         u_aspect: k.width() / k.height(),
         u_size: sp.size || 10,
       })),
-      k.pos(0, 0),
-      k.fixed(),
-      k.z(-100)
+      k.pos(0, 0), k.fixed(), k.z(-100)
     ]);
-    backgroundObj.onUpdate(() => {
-      backgroundObj.width = k.width();
-      backgroundObj.height = k.height();
-      backgroundObj.uniform.u_aspect = k.width() / k.height();
+    bg.onUpdate(() => { 
+        bg.width = k.width(); bg.height = k.height(); 
+        bg.uniform.u_aspect = k.width() / k.height(); 
     });
   }
 
   // --- 9. DYNAMIC SECTIONS GENERATION ---
   
-// Mapping JSON IDs to React Atoms
   const atomMap = {
     "about": isAboutModalVisibleAtom,
     "skills": isSkillsModalVisibleAtom,
@@ -194,7 +233,6 @@ export default async function initGame() {
     "projects": isProjectGalleryVisibleAtom
   };
 
-// Iterate over layoutData from JSON
   if (layoutData.sections) {
     layoutData.sections.forEach(config => {
       
@@ -209,14 +247,18 @@ export default async function initGame() {
         config.icon,
         colorHex,
         (sectionObj) => {
-          if (targetAtom) store.set(targetAtom, true);
+          
+          if (targetAtom) {
+            store.set(targetAtom, true);
+          }
 
           if (config.type === "special_about") {
              if (sectionObj.hasDrawnContent) return;
              sectionObj.hasDrawnContent = true;
+
              sectionObj.add([
-                k.text(aboutData.header.title, { font: "ibm-bold", size: 30 }),
-                k.color(k.Color.fromHex(theme.colors.text)),
+                k.text(aboutData.header?.title || "Portfolio", { font: "ibm-bold", size: 30 }),
+                k.color(k.Color.fromHex(theme.colors?.text || "#fff")),
                 k.anchor("center"),
                 k.pos(0, -130), 
              ]);
@@ -228,5 +270,6 @@ export default async function initGame() {
   }
 
   // --- CREATE PLAYER ---
-  makePlayer(k, k.vec2(k.center()), playerData.speed);
+  const playerSpeed = playerData.speed || 700;
+  makePlayer(k, k.vec2(k.center()), playerSpeed);
 }
