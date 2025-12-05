@@ -9,11 +9,54 @@
   },
   "about": {
     "description": "I am a curious and proactive developer, juggling frontend, backend, and a touch of AI magic.\nI am a passion-driven developer who loves a good challenge.\nI enjoy collaborating with others to turn ideas into reality, constantly exploring new technologies.",
-    "avatar": "player", 
+    "avatar": "player",
     "stats": [
-      { "label": "Creativity", "value": 90 },
-      { "label": "Logic", "value": 999 },
-      { "label": "Coffee", "value": 999 }
+      {
+        "label": "Creativity",
+        "value": 90
+      },
+      {
+        "label": "Logic",
+        "value": 999
+      },
+      {
+        "label": "Coffee",
+        "value": 999
+      }
     ]
-  }
+  },
+  "education": [
+    {
+      "degree": "Bachelor Degree in Computer Science",
+      "institution": "Thesis: Edge AI: Synergies between Edge Computing and Artificial Intelligence",
+      "year": ""
+    }
+  ],
+  "certifications": [
+    {
+      "name": "KCNA: Kubernetes and Cloud Native Associate",
+      "issuer": "CNCF",
+      "year": ""
+    },
+    {
+      "name": "Neo4j Certified Professional",
+      "issuer": "Neo4j",
+      "year": ""
+    },
+    {
+      "name": "70-483: Programming in C#",
+      "issuer": "Microsoft",
+      "year": ""
+    },
+    {
+      "name": "AZ-900: Microsoft Azure Fundamentals",
+      "issuer": "Microsoft",
+      "year": ""
+    },
+    {
+      "name": "AZ-204: Azure Developer Associate",
+      "issuer": "Microsoft",
+      "year": ""
+    }
+  ]
 }
