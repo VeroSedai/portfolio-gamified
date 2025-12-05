@@ -9,7 +9,7 @@ export default function makeSection(
   triggerOnce = true 
 ) {
   
-  // 1. Fallback colors if theme is missing
+  // 1. Fallback colors
   const colors = theme?.colors || {
     primary: "#2de2e6",
     secondary: "#ff0055",
@@ -40,7 +40,7 @@ export default function makeSection(
   const section = k.add([
     k.rect(160, 160, { radius: 16 }),
     k.anchor("center"),
-    k.area(),
+    k.area(), // Necessary for collisions
     k.pos(posVec2),
     
     // 3. Apply theme colors
@@ -86,32 +86,36 @@ export default function makeSection(
     section.opacity = 0.8;
   });
 
-  // --- COLLISION LOGIC WITH COOLDOWN ---
-  let isCooldown = false; // Prevents immediate re-triggering
+  // --- ROBUST COLLISION LOGIC ---
+  let isCooldown = false; // Flag to prevent multi-triggering
 
   if (onCollide) {
+    // 1. TRIGGER ON ENTER
     const onCollideHandler = section.onCollide("player", () => {
-      // If in cooldown (e.g. just closed modal), ignore collision
+      // If already active (cooldown), do nothing
       if (isCooldown) return;
 
       onCollide(section);
       
       if (triggerOnce) {
-        // For static content (Projects), trigger only once
+        // For static content (Projects), disable forever
         onCollideHandler.cancel(); 
       } else {
-        // For Modals (Skills/Experience), activate cooldown
-        // This gives the player 2 seconds to walk away after closing the modal
+        // For Modals: Activate cooldown immediately.
+        // The portal will NOT trigger again until you leave the area.
         isCooldown = true;
-        k.wait(2, () => {
-          isCooldown = false;
-        });
       }
     });
 
-    // Optional: Allow clicking to open even if in cooldown (intentional action)
-    section.onClick(() => {
-       onCollide(section);
+    // 2. RESET ON EXIT
+    // If the player is paused (because a modal opened), Kaplay might trigger onCollideEnd incorrectly.
+    // We only reset cooldown if the player is active and actually walking away.
+    section.onCollideEnd("player", (p) => {
+      if (p && p.paused) return; // Ignore fake exit due to pause
+
+      if (!triggerOnce) {
+        isCooldown = false; // Re-arm the portal only on real exit
+      }
     });
   }
 
