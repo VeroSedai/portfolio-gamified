@@ -1,19 +1,19 @@
 import makeKaplayCtx from "./kaplayCtx";
 import makePlayer from "./entities/Player";
 import makeSection from "./components/Section";
-import makeSocialIcon from "./components/SocialIcon";
-import { makeAppear } from "./utils";
-import makeEmailIcon from "./components/EmailIcon";
-import makeProjectCard from "./components/ProjectCard";
 import {
   musicVolumeAtom,
-  sfxVolumeAtom,
   cameraZoomValueAtom,
   store,
   isSkillsModalVisibleAtom,
   skillsDataAtom,
   isWorkExperienceModalVisibleAtom,
   workExperienceDataAtom,
+  isProjectGalleryVisibleAtom,
+  projectsDataAtom,
+  isAboutModalVisibleAtom, 
+  aboutDataAtom,
+  socialsDataAtom 
 } from "./store";
 
 export default async function initGame() {
@@ -25,19 +25,22 @@ export default async function initGame() {
   const experiencesData = await (await fetch("./configs/experiencesData.json")).json();
   const projectsData = await (await fetch("./configs/projectsData.json")).json();
 
-  // --- 2. APPLY THEME TO CSS (For React UI) ---
+  // --- 2. THEME SETUP ---
   const root = document.documentElement;
   root.style.setProperty("--color1", theme.colors.background); 
   root.style.setProperty("--color2", theme.colors.primary);    
   root.style.setProperty("--color3", theme.colors.text);       
 
-  // Save data to store for React Modals
+  // --- 3. STORE INITIALIZATION ---
   store.set(skillsDataAtom, skillsData);
   store.set(workExperienceDataAtom, experiencesData);
+  store.set(projectsDataAtom, projectsData);
+  store.set(aboutDataAtom, generalData); 
+  store.set(socialsDataAtom, socialsData); 
 
   const k = makeKaplayCtx();
 
-  // --- 3. DYNAMIC ASSET LOADING ---
+  // --- 4. DYNAMIC ASSET LOADING ---
   const loadedAssets = new Set(); 
   const loadAsset = (name, path) => {
     if (!name || loadedAssets.has(name)) return;
@@ -45,17 +48,10 @@ export default async function initGame() {
     loadedAssets.add(name);
   };
 
-  skillsData.forEach(skill => {
-    if (skill.logoData?.name) loadAsset(skill.logoData.name, `./logos/${skill.logoData.name}.png`);
-  });
-  socialsData.forEach(social => {
-    if (social.logoData?.name) loadAsset(social.logoData.name, `./logos/${social.logoData.name}.png`);
-  });
-  projectsData.forEach(project => {
-    if (project.thumbnail) loadAsset(project.thumbnail, `./projects/${project.thumbnail}.png`);
-  });
+  skillsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `./logos/${s.logoData.name}.png`));
+  socialsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `./logos/${s.logoData.name}.png`));
+  projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `./projects/${p.thumbnail}.png`));
 
-  // Assets Core
   k.loadSprite("player", "./sprites/player.png", {
     sliceX: 4, sliceY: 8,
     anims: {
@@ -78,15 +74,13 @@ export default async function initGame() {
   k.loadSound("flip", "./audio/flip.mp3");
   k.loadSound("match", "./audio/match.mp3");
 
-  // --- 4. GAME LOGIC & AUDIO ---
+  // --- 5. AUDIO SYSTEM ---
   let bgm = null;
   let musicStarted = false;
 
   function startBGM() {
     if (!musicStarted) {
-      if (k.audioCtx && k.audioCtx.state === "suspended") {
-         k.audioCtx.resume();
-      }
+      if (k.audioCtx && k.audioCtx.state === "suspended") k.audioCtx.resume();
       bgm = k.play("bgm", { loop: true, volume: store.get(musicVolumeAtom) });
       musicStarted = true;
     }
@@ -96,19 +90,18 @@ export default async function initGame() {
   k.onMousePress(startBGM);
   k.onTouchStart(startBGM); 
   k.onTouchEnd(startBGM);   
-
   k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
 
-  // --- 5. PLAYER PAUSE LOGIC ---
+  // --- 6. PLAYER PAUSE LOGIC ---
   k.onUpdate(() => {
-    // Check if one of the main modals is open
-    const isSkillsOpen = store.get(isSkillsModalVisibleAtom);
-    const isWorkOpen = store.get(isWorkExperienceModalVisibleAtom);
+    const isSkills = store.get(isSkillsModalVisibleAtom);
+    const isWork = store.get(isWorkExperienceModalVisibleAtom);
+    const isProj = store.get(isProjectGalleryVisibleAtom);
+    const isAbout = store.get(isAboutModalVisibleAtom); 
     
     const player = k.get("player")[0];
-    
     if (player) {
-      if (isSkillsOpen || isWorkOpen) {
+      if (isSkills || isWork || isProj || isAbout) {
         if (!player.paused) {
           player.moveTo(player.pos); 
           player.play("walk-down-idle"); 
@@ -120,19 +113,18 @@ export default async function initGame() {
     }
   });
 
-  // --- 6. CAMERA SETTINGS ---
+  // --- 7. CAMERA ---
   const setInitCamZoomValue = () => {
     if (k.width() < 1000) { k.camScale(k.vec2(0.5)); store.set(cameraZoomValueAtom, 0.5); return; }
     k.camScale(k.vec2(0.8)); store.set(cameraZoomValueAtom, 0.8);
   };
   setInitCamZoomValue();
-
   k.onUpdate(() => {
-    const cameraZoomValue = store.get(cameraZoomValueAtom);
-    if (cameraZoomValue !== k.camScale().x) k.camScale(k.vec2(cameraZoomValue));
+    const val = store.get(cameraZoomValueAtom);
+    if (val !== k.camScale().x) k.camScale(k.vec2(val));
   });
 
-  // --- 7. BACKGROUND SHADER ---
+  // --- 8. SHADER ---
   const tiledBackground = k.add([
     k.uvquad(k.width(), k.height()),
     k.shader("tiledPattern", () => ({
@@ -146,80 +138,47 @@ export default async function initGame() {
     k.pos(0, 0),
     k.fixed(),
   ]);
-
   tiledBackground.onUpdate(() => {
     tiledBackground.width = k.width();
     tiledBackground.height = k.height();
     tiledBackground.uniform.u_aspect = k.width() / k.height();
   });
 
-  // --- 8. GAME SECTIONS ---
-  
-  // SECTION 1: HEADER & SOCIALS
+  // --- 9. GAME SECTIONS ---
+
+  // SECTION 1: ABOUT
   makeSection(
     k,
     k.vec2(k.center().x, k.center().y - 400),
-    generalData.section1Name,
-    (parent) => {
-      const container = parent.add([k.pos(-805, -700), k.opacity(0)]);
-      container.add([
-        k.text(generalData.header.title, { font: "ibm-bold", size: 40 }),
-        k.color(k.Color.fromHex(theme.colors.text)), 
-        k.pos(395, 0),
-        k.opacity(0),
-      ]);
+    generalData.section1Name, 
+    (section) => {
+        store.set(isAboutModalVisibleAtom, true);
 
-      container.add([
-        k.text(generalData.header.subtitle, { font: "ibm-bold", size: 20 }),
-        k.color(k.Color.fromHex(theme.colors.primary)), 
-        k.pos(400, 50),
-        k.opacity(0),
-      ]);
+        if (section.hasDrawnContent) return;
+        section.hasDrawnContent = true;
 
-      const socialContainer = container.add([k.pos(130, 0), k.opacity(0)]);
-
-      for (const socialData of socialsData) {
-        if (socialData.name === "Email") {
-          makeEmailIcon(
-            k, 
-            socialContainer, 
-            k.vec2(socialData.pos.x, socialData.pos.y), 
-            socialData.logoData, 
-            socialData.name, 
-            socialData.address,
-            theme 
-          );
-          continue;
-        }
-        makeSocialIcon(
-          k, 
-          socialContainer, 
-          k.vec2(socialData.pos.x, socialData.pos.y), 
-          socialData.logoData, 
-          socialData.name, 
-          socialData.link, 
-          socialData.description, 
-          theme
-        );
-      }
-      makeAppear(k, container);
-      makeAppear(k, socialContainer);
-    },
-    theme 
-    // triggerOnce defaults to TRUE (Correct for Header spawning)
+        section.add([
+          k.text(generalData.header.title, { font: "ibm-bold", size: 30 }),
+          k.color(k.Color.fromHex(theme.colors.text)),
+          k.anchor("center"),
+          k.pos(0, -130), 
+        ]);
+    }, 
+    theme,
+    false 
   );
 
-  // SECTION 2: SKILLS (Opens React Modal)
+  // SECTION 2: SKILLS
   makeSection(
     k,
     k.vec2(k.center().x - 400, k.center().y),
     generalData.section2Name,
-    () => { store.set(isSkillsModalVisibleAtom, true); }, // On Collide callback
+    () => { store.set(isSkillsModalVisibleAtom, true); }, 
     theme,
-    false
+    false 
   );
 
-  // SECTION 3: WORK EXPERIENCE (Opens React Modal)
+  // SECTION 3: WORK EXPERIENCE
   makeSection(
     k,
     k.vec2(k.center().x + 400, k.center().y),
@@ -229,26 +188,14 @@ export default async function initGame() {
     false 
   );
 
-  // SECTION 4: PROJECTS (Renders cards on map)
+  // SECTION 4: PROJECTS
   makeSection(
     k,
     k.vec2(k.center().x, k.center().y + 400),
     generalData.section4Name,
-    (parent) => {
-      const container = parent.add([k.opacity(0), k.pos(0, 0)]);
-      for (const project of projectsData) {
-        makeProjectCard(
-          k,
-          container,
-          k.vec2(project.pos.x, project.pos.y),
-          project.data,
-          project.thumbnail,
-          theme 
-        );
-      }
-      makeAppear(k, container);
-    },
-    theme
+    () => { store.set(isProjectGalleryVisibleAtom, true); },
+    theme,
+    false 
   );
 
   makePlayer(k, k.vec2(k.center()), 700);

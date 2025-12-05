@@ -20,7 +20,15 @@ export const cameraZoomValueAtom = atom({ value: 1 });
 
 export const isSkillsModalVisibleAtom = atom(false);
 export const skillsDataAtom = atom([]);
+
 export const isWorkExperienceModalVisibleAtom = atom(false);
 export const workExperienceDataAtom = atom([]);
+
+export const isProjectGalleryVisibleAtom = atom(false); 
+export const projectsDataAtom = atom([]); 
+
+export const isAboutModalVisibleAtom = atom(false);
+export const aboutDataAtom = atom(null);
+export const socialsDataAtom = atom([]); 
 
 export const store = createStore();

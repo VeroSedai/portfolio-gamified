@@ -5,19 +5,22 @@ import ProjectModal from "./reactComponents/ProjectModal";
 import VolumeControl from "./reactComponents/VolumeControl";
 import SkillsModal from "./reactComponents/SkillsModal";
 import WorkExperienceModal from "./reactComponents/WorkExperienceModal";
+import ProjectGalleryModal from "./reactComponents/ProjectGalleryModal";
+import AboutModal from "./reactComponents/AboutModal";
 
 export default function ReactUI() {
   return (
     <>
       <p className="controls-message">Tap/Click around to move</p>
-      <p className="cp-message">Sound Effect by u_y3wk5ympz8, Shiden Beats Music and Maksym Malko from Pixabay</p>
       <CameraController />
+      <VolumeControl />
       <SocialModal />
       <EmailModal />
       <ProjectModal />
       <SkillsModal />
-      <VolumeControl />
       <WorkExperienceModal />
+      <ProjectGalleryModal />
+      <AboutModal />
     </>
   );
 }
