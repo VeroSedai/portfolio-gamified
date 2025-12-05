@@ -1,10 +1,19 @@
 {
-    "header": {
-      "title": "Hi, I'm Veronica",
-      "subtitle": "Curious and proactive developer, juggling frontend, backend, and a touch of AI magic.\nPassion-driven developer who loves a good challenge.\nI enjoy collaborating with others to turn ideas into reality, constantly exploring new technologies."
-    },
-    "section1Name": "About",
-    "section2Name": "Skills",
-    "section3Name": "Work Experience",
-    "section4Name": "Projects"
+  "section1Name": "About",
+  "section2Name": "Skills",
+  "section3Name": "Work Experience",
+  "section4Name": "Projects",
+  "header": {
+    "title": "VERONICA PUDDU",
+    "subtitle": "Senior Full Stack Developer"
+  },
+  "about": {
+    "description": "I am a curious and proactive developer, juggling frontend, backend, and a touch of AI magic.\nI am a passion-driven developer who loves a good challenge.\nI enjoy collaborating with others to turn ideas into reality, constantly exploring new technologies.",
+    "avatar": "player", 
+    "stats": [
+      { "label": "Creativity", "value": 90 },
+      { "label": "Logic", "value": 999 },
+      { "label": "Coffee", "value": 999 }
+    ]
   }
+}
