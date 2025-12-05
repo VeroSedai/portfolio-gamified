@@ -4,6 +4,7 @@ import EmailModal from "./reactComponents/EmailModal";
 import ProjectModal from "./reactComponents/ProjectModal";
 import VolumeControl from "./reactComponents/VolumeControl";
 import SkillsModal from "./reactComponents/SkillsModal";
+import WorkExperienceModal from "./reactComponents/WorkExperienceModal";
 
 export default function ReactUI() {
   return (
@@ -16,6 +17,7 @@ export default function ReactUI() {
       <ProjectModal />
       <SkillsModal />
       <VolumeControl />
+      <WorkExperienceModal />
     </>
   );
 }

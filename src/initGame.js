@@ -3,7 +3,6 @@ import makePlayer from "./entities/Player";
 import makeSection from "./components/Section";
 import makeSocialIcon from "./components/SocialIcon";
 import { makeAppear } from "./utils";
-import makeWorkExperienceCard from "./components/WorkExperienceCard";
 import makeEmailIcon from "./components/EmailIcon";
 import makeProjectCard from "./components/ProjectCard";
 import {
@@ -13,11 +12,12 @@ import {
   store,
   isSkillsModalVisibleAtom,
   skillsDataAtom,
+  isWorkExperienceModalVisibleAtom,
+  workExperienceDataAtom,
 } from "./store";
 
 export default async function initGame() {
   // --- 1. DATA LOADING ---
-  // Load configuration and content from JSON files
   const theme = await (await fetch("./configs/theme.json")).json();
   const generalData = await (await fetch("./configs/generalData.json")).json();
   const skillsData = await (await fetch("./configs/skillsData.json")).json();
@@ -25,45 +25,37 @@ export default async function initGame() {
   const experiencesData = await (await fetch("./configs/experiencesData.json")).json();
   const projectsData = await (await fetch("./configs/projectsData.json")).json();
 
-  // --- 2. THEME APPLICATION ---
-  // Apply theme colors to CSS variables for React UI components
+  // --- 2. APPLY THEME TO CSS (For React UI) ---
   const root = document.documentElement;
   root.style.setProperty("--color1", theme.colors.background); 
   root.style.setProperty("--color2", theme.colors.primary);    
   root.style.setProperty("--color3", theme.colors.text);       
 
-  // Store skills data for the React Modal
+  // Save data to store for React Modals
   store.set(skillsDataAtom, skillsData);
+  store.set(workExperienceDataAtom, experiencesData);
 
-  // Initialize Kaplay context
   const k = makeKaplayCtx();
 
   // --- 3. DYNAMIC ASSET LOADING ---
-  // Avoid duplicate loading
   const loadedAssets = new Set(); 
-  
   const loadAsset = (name, path) => {
     if (!name || loadedAssets.has(name)) return;
     k.loadSprite(name, path);
     loadedAssets.add(name);
   };
 
-  // Load Skills logos
   skillsData.forEach(skill => {
     if (skill.logoData?.name) loadAsset(skill.logoData.name, `./logos/${skill.logoData.name}.png`);
   });
-  
-  // Load Socials logos
   socialsData.forEach(social => {
     if (social.logoData?.name) loadAsset(social.logoData.name, `./logos/${social.logoData.name}.png`);
   });
-  
-  // Load Project thumbnails
   projectsData.forEach(project => {
     if (project.thumbnail) loadAsset(project.thumbnail, `./projects/${project.thumbnail}.png`);
   });
 
-  // Load Core Assets (Player, Fonts, Shader, Audio)
+  // Assets Core
   k.loadSprite("player", "./sprites/player.png", {
     sliceX: 4, sliceY: 8,
     anims: {
@@ -92,7 +84,6 @@ export default async function initGame() {
 
   function startBGM() {
     if (!musicStarted) {
-      // Resume audio context if suspended (common browser behavior)
       if (k.audioCtx && k.audioCtx.state === "suspended") {
          k.audioCtx.resume();
       }
@@ -101,30 +92,30 @@ export default async function initGame() {
     }
   }
 
-  // Audio start listeners (Mouse, Keyboard, Touch for mobile)
   k.onKeyPress(startBGM);
   k.onMousePress(startBGM);
   k.onTouchStart(startBGM); 
   k.onTouchEnd(startBGM);   
 
-  // Update music volume
   k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
 
   // --- 5. PLAYER PAUSE LOGIC ---
-  // Freezes the player when a React Modal is open (e.g. Skills)
   k.onUpdate(() => {
+    // Check if one of the main modals is open
     const isSkillsOpen = store.get(isSkillsModalVisibleAtom);
+    const isWorkOpen = store.get(isWorkExperienceModalVisibleAtom);
+    
     const player = k.get("player")[0];
     
     if (player) {
-      if (isSkillsOpen) {
+      if (isSkillsOpen || isWorkOpen) {
         if (!player.paused) {
-          player.moveTo(player.pos); // Stop movement target
-          player.play("walk-down-idle"); // Stop animation
-          player.paused = true; // Freeze updates
+          player.moveTo(player.pos); 
+          player.play("walk-down-idle"); 
+          player.paused = true; 
         }
       } else if (player.paused) {
-        player.paused = false; // Unfreeze
+        player.paused = false; 
       }
     }
   });
@@ -146,8 +137,8 @@ export default async function initGame() {
     k.uvquad(k.width(), k.height()),
     k.shader("tiledPattern", () => ({
       u_time: k.time() / 15,
-      u_color1: k.Color.fromHex(theme.colors.background), // Dynamic Theme Color
-      u_color2: k.Color.fromHex(theme.colors.primary),    // Dynamic Theme Color
+      u_color1: k.Color.fromHex(theme.colors.background), 
+      u_color2: k.Color.fromHex(theme.colors.primary),    
       u_speed: k.vec2(0.3, -0.3),
       u_aspect: k.width() / k.height(),
       u_size: 10,
@@ -190,32 +181,32 @@ export default async function initGame() {
       for (const socialData of socialsData) {
         if (socialData.name === "Email") {
           makeEmailIcon(
-            k,
-            socialContainer,
-            k.vec2(socialData.pos.x, socialData.pos.y),
-            socialData.logoData,
-            socialData.name,
+            k, 
+            socialContainer, 
+            k.vec2(socialData.pos.x, socialData.pos.y), 
+            socialData.logoData, 
+            socialData.name, 
             socialData.address,
-            theme
+            theme 
           );
           continue;
         }
-
         makeSocialIcon(
-          k,
-          socialContainer,
-          k.vec2(socialData.pos.x, socialData.pos.y),
-          socialData.logoData,
-          socialData.name,
-          socialData.link,
-          socialData.description,
+          k, 
+          socialContainer, 
+          k.vec2(socialData.pos.x, socialData.pos.y), 
+          socialData.logoData, 
+          socialData.name, 
+          socialData.link, 
+          socialData.description, 
           theme
         );
       }
       makeAppear(k, container);
       makeAppear(k, socialContainer);
     },
-    theme // Pass theme for dynamic styling
+    theme 
+    // triggerOnce defaults to TRUE (Correct for Header spawning)
   );
 
   // SECTION 2: SKILLS (Opens React Modal)
@@ -223,33 +214,22 @@ export default async function initGame() {
     k,
     k.vec2(k.center().x - 400, k.center().y),
     generalData.section2Name,
-    () => { store.set(isSkillsModalVisibleAtom, true); }, // Collision callback
-    theme
+    () => { store.set(isSkillsModalVisibleAtom, true); }, // On Collide callback
+    theme,
+    false
   );
 
-  // SECTION 3: WORK EXPERIENCE
+  // SECTION 3: WORK EXPERIENCE (Opens React Modal)
   makeSection(
     k,
     k.vec2(k.center().x + 400, k.center().y),
     generalData.section3Name,
-    (parent) => {
-      const container = parent.add([k.opacity(0), k.pos(0)]);
-      for (const experienceData of experiencesData) {
-        makeWorkExperienceCard(
-          k,
-          container,
-          k.vec2(experienceData.pos.x, experienceData.pos.y),
-          experienceData.cardHeight,
-          experienceData.roleData,
-          theme // Pass theme to cards
-        );
-      }
-      makeAppear(k, container);
-    },
-    theme
+    () => { store.set(isWorkExperienceModalVisibleAtom, true); }, 
+    theme,
+    false 
   );
 
-  // SECTION 4: PROJECTS
+  // SECTION 4: PROJECTS (Renders cards on map)
   makeSection(
     k,
     k.vec2(k.center().x, k.center().y + 400),
@@ -263,7 +243,7 @@ export default async function initGame() {
           k.vec2(project.pos.x, project.pos.y),
           project.data,
           project.thumbnail,
-          theme // Pass theme to cards
+          theme 
         );
       }
       makeAppear(k, container);
@@ -271,6 +251,5 @@ export default async function initGame() {
     theme
   );
 
-  // Initialize Player
   makePlayer(k, k.vec2(k.center()), 700);
 }
