@@ -30,5 +30,6 @@ export const projectsDataAtom = atom([]);
 export const isAboutModalVisibleAtom = atom(false);
 export const aboutDataAtom = atom(null);
 export const socialsDataAtom = atom([]); 
+export const themeAtom = atom(null);
 
 export const store = createStore();

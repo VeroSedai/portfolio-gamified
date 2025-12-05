@@ -1,8 +1,13 @@
 import { useState, useEffect } from "react";
 import { useAtom, useAtomValue } from "jotai";
-import { isSkillsModalVisibleAtom, skillsDataAtom } from "../store";
+import { 
+  isSkillsModalVisibleAtom, 
+  skillsDataAtom, 
+  sfxVolumeAtom,
+  themeAtom
+} from "../store";
 
-// Funzione per mescolare (Fisher-Yates)
+// Helper function to shuffle array (Fisher-Yates)
 const shuffleArray = (array) => {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
@@ -15,21 +20,36 @@ const shuffleArray = (array) => {
 export default function SkillsModal() {
   const [isVisible, setIsVisible] = useAtom(isSkillsModalVisibleAtom);
   const skillsData = useAtomValue(skillsDataAtom);
+  const sfxVolume = useAtomValue(sfxVolumeAtom);
+  const theme = useAtomValue(themeAtom);
 
   const [cards, setCards] = useState([]);
   const [flippedIndices, setFlippedIndices] = useState([]);
   const [matchedNames, setMatchedNames] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Inizializza il gioco quando il modale si apre
+  // --- AUDIO HELPER ---
+  const playAudio = (key) => {
+    try {
+      // 1. Search in loaded theme
+      // 2. If not found, smart fallback on key name (e.g. "flip.mp3")
+      const filename = theme?.audio?.sfx?.[key] || `${key}.mp3`;
+      
+      const audio = new Audio(`./audio/${filename}`);
+      audio.volume = sfxVolume; 
+      audio.play().catch(e => console.warn("Audio play blocked", e));
+    } catch (e) {
+      console.error("Audio error", e);
+    }
+  };
+
+  // Initialize game when modal opens
   useEffect(() => {
     if (isVisible && skillsData.length > 0) {
-      // 1. Prendi i dati, duplicali e aggiungi ID unico
       const deck = [...skillsData, ...skillsData].map((item, index) => ({
         ...item,
-        uniqueId: index, // ID univoco per React Key
+        uniqueId: index, 
       }));
-      // 2. Mescola e setta
       setCards(shuffleArray(deck));
       setFlippedIndices([]);
       setMatchedNames([]);
@@ -37,9 +57,8 @@ export default function SkillsModal() {
     }
   }, [isVisible, skillsData]);
 
-  // Gestione Click Carta
+  // Handle Card Click
   const handleCardClick = (index) => {
-    // Blocca se: sta processando, carta già girata, carta già indovinata
     if (
       isProcessing ||
       flippedIndices.includes(index) ||
@@ -48,10 +67,11 @@ export default function SkillsModal() {
       return;
     }
 
+    playAudio("flip"); // Reads from JSON
+
     const newFlipped = [...flippedIndices, index];
     setFlippedIndices(newFlipped);
 
-    // Se ne abbiamo girate 2, controlliamo il match
     if (newFlipped.length === 2) {
       setIsProcessing(true);
       const index1 = newFlipped[0];
@@ -60,12 +80,14 @@ export default function SkillsModal() {
       if (cards[index1].name === cards[index2].name) {
         // MATCH!
         setTimeout(() => {
+          playAudio("match");
+          
           setMatchedNames((prev) => [...prev, cards[index1].name]);
           setFlippedIndices([]);
           setIsProcessing(false);
         }, 500);
       } else {
-        // NO MATCH -> Gira di nuovo dopo 1 secondo
+        // NO MATCH
         setTimeout(() => {
           setFlippedIndices([]);
           setIsProcessing(false);
@@ -79,7 +101,7 @@ export default function SkillsModal() {
   return (
     <div className="modal">
       <div className="modal-content skills-modal">
-        {/* Intestazione */}
+        {/* Header */}
         <div className="skills-header">
             <h1>Solve the memory game to discover my skills</h1>
             <button 
@@ -88,14 +110,13 @@ export default function SkillsModal() {
             >X</button>
         </div>
 
-        {/* Griglia di Gioco */}
+        {/* Game Grid */}
         <div className="memory-grid">
           {cards.map((card, index) => {
             const isFlipped = flippedIndices.includes(index);
             const isMatched = matchedNames.includes(card.name);
             
-            // Costruiamo il percorso immagine (assumendo siano in /logos/)
-            // Se le immagini sono base64 nel JSON, usa card.logoData direttamente
+            // Build image path
             const imgSrc = `./logos/${card.logoData.name}.png`; 
 
             return (
@@ -105,11 +126,11 @@ export default function SkillsModal() {
                 onClick={() => handleCardClick(index)}
               >
                 <div className="card-inner">
-                  {/* FRONTE (Coperta) */}
+                  {/* FRONT (Cover) */}
                   <div className="card-front">
                     <span>{"</>"}</span>
                   </div>
-                  {/* RETRO (Immagine Skill) */}
+                  {/* BACK (Skill Image) */}
                   <div className="card-back">
                     <img src={imgSrc} alt={card.name} />
                   </div>
