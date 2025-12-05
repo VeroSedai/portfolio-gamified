@@ -6,7 +6,7 @@
         "title": "Senior Full Stack Developer",
         "description": "- Frontend Development: designed and implemented user interfaces for a chatbot and a back-office web application using React, TypeScript, and JavaScript.\n- AI Project: contributed to the development of a chatbot assisting call center operators, powered by Azure AI and leveraging PromptFlow, LangChain, and LangSmith for orchestration and monitoring. Integrated Neo4j to build and query knowledge graphs, improving contextual reasoning and the accuracy of responses.\n- Cloud Services: implemented and managed solutions with Azure Front Door, API Management (APIM), App Service, Application Insights, and Azure Storage, ensuring a secure and scalable architecture.\n- Backend Development: developed and maintained backend services in C# .NET Core, ensuring integration, performance, and scalability.\n- Agile Methodology: worked within a Scrum framework, delivering high-quality, iterative solutions aligned with agile principles.\n- Reviewed code, debugged problems, and corrected issues.\n- Discussed project progress with customers, collected feedback on different stages and directly addressed concerns.",
         "company": {
-          "name": "Vodafone",
+          "name": "[\\REDACTED\\]",
           "startDate": "2022",
           "endDate": "Present"
         }
@@ -17,9 +17,9 @@
       "cardHeight": 320,
       "roleData": {
         "title": "Full Stack Developer, Senior Analyst",
-        "description": "-Typescript/React.js and .NET Core/Java developer, specialized and certified in Azure Cloud.\n-Reviewed code, debugged problems, and corrected issues. Managed development milestones from initial steps through final delivery. Discussed project progress with customers, collected feedback on different stages and directly addressed concerns.\n-Tutor @ Avanade Italy’s ATCiT Academy",
+        "description": "-Typescript/React.js and .NET Core/Java developer, specialized and certified in Azure Cloud.\n-Reviewed code, debugged problems, and corrected issues. Managed development milestones from initial steps through final delivery. Discussed project progress with customers, collected feedback on different stages and directly addressed concerns.",
         "company": {
-          "name": "Avanade",
+          "name": "[\\REDACTED\\]",
           "startDate": "2016",
           "endDate": "2022"
         }
