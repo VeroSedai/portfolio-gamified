@@ -4,14 +4,14 @@ import { isAboutModalVisibleAtom, aboutDataAtom, socialsDataAtom } from "../stor
 
 export default function AboutModal() {
   const [isVisible, setIsVisible] = useAtom(isAboutModalVisibleAtom);
-  const generalData = useAtomValue(aboutDataAtom);
+  const aboutData = useAtomValue(aboutDataAtom);
   const socials = useAtomValue(socialsDataAtom);
   
   const [copyMsg, setCopyMsg] = useState("");
 
-  if (!isVisible || !generalData) return null;
+  if (!isVisible || !aboutData) return null;
 
-  const { header, about, education, certifications } = generalData;
+  const { header, about, education, certifications } = aboutData;
 
   const handleSocialClick = (social) => {
     if (social.name === "Email") {

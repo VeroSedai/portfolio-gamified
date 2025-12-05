@@ -20,7 +20,7 @@ export default async function initGame() {
   // --- 1. DATA LOADING ---
   // Load all configuration files
   const theme = await (await fetch("./configs/theme.json")).json();
-  const generalData = await (await fetch("./configs/generalData.json")).json();
+  const aboutData = await (await fetch("./configs/aboutData.json")).json();
   const layoutData = await (await fetch("./configs/layoutData.json")).json(); 
   const playerData = await (await fetch("./configs/playerData.json")).json(); 
   
@@ -41,7 +41,7 @@ export default async function initGame() {
   store.set(skillsDataAtom, skillsData);
   store.set(workExperienceDataAtom, experiencesData);
   store.set(projectsDataAtom, projectsData);
-  store.set(aboutDataAtom, generalData); 
+  store.set(aboutDataAtom, aboutData); 
   store.set(socialsDataAtom, socialsData); 
 
   const k = makeKaplayCtx();
@@ -185,7 +185,7 @@ export default async function initGame() {
              sectionObj.hasDrawnContent = true;
 
              sectionObj.add([
-                k.text(generalData.header.title, { font: "ibm-bold", size: 30 }),
+                k.text(aboutData.header.title, { font: "ibm-bold", size: 30 }),
                 k.color(k.Color.fromHex(theme.colors.text)),
                 k.anchor("center"),
                 k.pos(0, -130), 
