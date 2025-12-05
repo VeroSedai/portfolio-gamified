@@ -18,21 +18,26 @@ import {
 
 export default async function initGame() {
   // --- 1. DATA LOADING ---
+  // Load all configuration files
   const theme = await (await fetch("./configs/theme.json")).json();
   const generalData = await (await fetch("./configs/generalData.json")).json();
   const layoutData = await (await fetch("./configs/layoutData.json")).json(); 
+  const playerData = await (await fetch("./configs/playerData.json")).json(); 
+  
   const skillsData = await (await fetch("./configs/skillsData.json")).json();
   const socialsData = await (await fetch("./configs/socialsData.json")).json();
   const experiencesData = await (await fetch("./configs/experiencesData.json")).json();
   const projectsData = await (await fetch("./configs/projectsData.json")).json();
 
   // --- 2. THEME SETUP ---
+  // Apply theme colors to CSS variables for React UI
   const root = document.documentElement;
   root.style.setProperty("--color1", theme.colors.background); 
   root.style.setProperty("--color2", theme.colors.primary);    
   root.style.setProperty("--color3", theme.colors.text);       
 
   // --- 3. STORE INITIALIZATION ---
+  // Store data for React Modals
   store.set(skillsDataAtom, skillsData);
   store.set(workExperienceDataAtom, experiencesData);
   store.set(projectsDataAtom, projectsData);
@@ -53,20 +58,14 @@ export default async function initGame() {
   socialsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `./logos/${s.logoData.name}.png`));
   projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `./projects/${p.thumbnail}.png`));
 
-  k.loadSprite("player", "./sprites/player.png", {
-    sliceX: 4, sliceY: 8,
-    anims: {
-      "walk-down-idle": 0, "walk-down": { from: 0, to: 3, loop: true },
-      "walk-left-down": { from: 4, to: 7, loop: true }, "walk-left-down-idle": 4,
-      "walk-left": { from: 8, to: 11, loop: true }, "walk-left-idle": 8,
-      "walk-left-up": { from: 12, to: 15, loop: true }, "walk-left-up-idle": 12,
-      "walk-up": { from: 16, to: 19, loop: true }, "walk-up-idle": 16,
-      "walk-right-up": { from: 20, to: 23, loop: true }, "walk-right-up-idle": 20,
-      "walk-right": { from: 24, to: 27, loop: true }, "walk-right-idle": 24,
-      "walk-right-down": { from: 28, to: 31, loop: true }, "walk-right-down-idle": 28,
-    },
+  // --- 4b. LOAD PLAYER SPRITE (From playerData.json) ---
+  k.loadSprite("player", `./sprites/${playerData.sprite}.png`, {
+    sliceX: playerData.sliceX,
+    sliceY: playerData.sliceY,
+    anims: playerData.anims,
   });
 
+  // Load Core Assets
   k.loadFont("ibm-regular", "./fonts/IBMPlexSans-Regular.ttf");
   k.loadFont("ibm-bold", "./fonts/IBMPlexSans-Bold.ttf");
   k.loadShaderURL("tiledPattern", null, "./shaders/tiledPattern.frag");
@@ -95,7 +94,7 @@ export default async function initGame() {
 
   // --- 6. PLAYER PAUSE LOGIC ---
   k.onUpdate(() => {
-    // Check if ANY modal is visible using the atom list
+    // Check if any modal is open
     const isSkills = store.get(isSkillsModalVisibleAtom);
     const isWork = store.get(isWorkExperienceModalVisibleAtom);
     const isProj = store.get(isProjectGalleryVisibleAtom);
@@ -148,6 +147,7 @@ export default async function initGame() {
 
   // --- 9. DYNAMIC SECTIONS GENERATION ---
   
+  // Mapping JSON IDs to React Atoms
   const atomMap = {
     "about": isAboutModalVisibleAtom,
     "skills": isSkillsModalVisibleAtom,
@@ -155,14 +155,15 @@ export default async function initGame() {
     "projects": isProjectGalleryVisibleAtom
   };
 
-  // Loop through layout in JSON to build the world
+  // Iterate over layoutData from JSON
   if (layoutData.sections) {
     layoutData.sections.forEach(config => {
       
+      // Resolve color from theme key
       const colorHex = theme.colors[config.colorKey] || theme.colors.primary;
       const targetAtom = atomMap[config.id];
 
-      // All portals are now modals, so we want them re-openable (triggerOnce = false)
+      // All portals allow reopening (triggerOnce = false)
       const triggerOnce = false;
 
       makeSection(
@@ -173,12 +174,12 @@ export default async function initGame() {
         colorHex,
         (sectionObj) => {
           
-          // Open the specific modal
+          // Open Modal
           if (targetAtom) {
             store.set(targetAtom, true);
           }
 
-          // Special Header drawing for "About"
+          // Special handling for "About" Header (Text on Map)
           if (config.type === "special_about") {
              if (sectionObj.hasDrawnContent) return;
              sectionObj.hasDrawnContent = true;
@@ -191,10 +192,11 @@ export default async function initGame() {
              ]);
           }
         },
-        triggerOnce 
+        triggerOnce
       );
     });
   }
 
-  makePlayer(k, k.vec2(k.center()), 700);
+  // --- CREATE PLAYER ---
+  makePlayer(k, k.vec2(k.center()), playerData.speed);
 }
