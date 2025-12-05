@@ -1,4 +1,3 @@
-import { PALETTE } from "../constants";
 import {
   isProjectModalVisibleAtom,
   chosenProjectDataAtom,
@@ -6,7 +5,20 @@ import {
 } from "../store";
 import { opacityTrickleDown } from "../utils";
 
-export default function makeProjectCard(k, parent, posVec2, data, thumbnail) {
+export default function makeProjectCard(
+  k,
+  parent,
+  posVec2,
+  data,
+  thumbnail,
+  theme 
+) {
+  const colors = theme?.colors || {
+    primary: "#2de2e6",
+    text: "#ffffff",
+    cardBackground: "#0b0c15"
+  };
+
   const card = parent.add([
     k.anchor("center"),
     k.pos(posVec2),
@@ -30,20 +42,21 @@ export default function makeProjectCard(k, parent, posVec2, data, thumbnail) {
   const cardTitle = card.add([
     k.text(data.title, {
       font: "ibm-bold",
-      size: 20,
+      size: 28,
       width: 600,
       lineSpacing: 12,
     }),
-    k.color(k.Color.fromHex(PALETTE.color1)),
-    k.pos(-310, 200),
+    k.color(k.Color.fromHex(colors.text)), 
+    k.pos(-310, 200), 
     k.opacity(0),
   ]);
 
   const cardSwitch = card.add([
     k.circle(30),
     k.area(),
-    k.color(k.Color.fromHex(PALETTE.color1)),
-    k.pos(400, 0),
+    k.color(k.Color.fromHex(colors.tertiary || colors.primary)), 
+    k.pos(400, 0), 
+    k.anchor("center"),
     k.opacity(0), 
   ]);
 

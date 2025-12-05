@@ -1,4 +1,3 @@
-import { PALETTE } from "../constants";
 import { emailAtom, isEmailModalVisibleAtom, store } from "../store";
 import { opacityTrickleDown } from "../utils";
 import makeIcon from "./Icon";
@@ -9,19 +8,23 @@ export default function makeEmailIcon(
   posVec2,
   imageData,
   subtitle,
-  email
+  email,
+  theme
 ) {
   const [emailIcon, subtitleText] = makeIcon(
     k,
     parent,
     posVec2,
     imageData,
-    subtitle
+    subtitle,
+    theme
   );
+
+  const backgroundColor = theme?.colors?.background || "#0b0c15";
 
   const emailSwitch = emailIcon.add([
     k.circle(30),
-    k.color(k.Color.fromHex(PALETTE.color1)),
+    k.color(k.Color.fromHex(backgroundColor)),
     k.anchor("center"),
     k.area(),
     k.pos(0, 150),

@@ -1,0 +1,13 @@
+{
+    "themeName": "Cyberpunk Neon",
+    "colors": {
+      "background": "#0b0c15",
+      "text": "#ffffff",
+      "primary": "#2de2e6",
+      "secondary": "#ff0055",
+      "tertiary": "#f9f871",
+      "quaternary": "#bd93f9",
+      "cardBackground": "#1a1b26",
+      "cardBack": "#11111b"
+    }
+  }

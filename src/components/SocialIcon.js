@@ -1,4 +1,3 @@
-import { PALETTE } from "../constants";
 import {
   isSocialModalVisibleAtom,
   selectedLinkAtom,
@@ -15,19 +14,23 @@ export default function makeSocialIcon(
   imageData,
   subtitle,
   link,
-  description
+  description,
+  theme
 ) {
   const [socialIcon, subtitleText] = makeIcon(
     k,
     parent,
     posVec2,
     imageData,
-    subtitle
+    subtitle,
+    theme
   );
+
+  const backgroundColor = theme?.colors?.background || "#0b0c15";
 
   const linkSwitch = socialIcon.add([
     k.circle(30),
-    k.color(k.Color.fromHex(PALETTE.color1)),
+    k.color(k.Color.fromHex(backgroundColor)), 
     k.anchor("center"),
     k.area(),
     k.pos(0, 150),

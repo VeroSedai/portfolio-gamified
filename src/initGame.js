@@ -1,9 +1,7 @@
 import makeKaplayCtx from "./kaplayCtx";
 import makePlayer from "./entities/Player";
 import makeSection from "./components/Section";
-import { PALETTE } from "./constants";
 import makeSocialIcon from "./components/SocialIcon";
-import makeSkillIcon from "./components/SkillIcon";
 import { makeAppear } from "./utils";
 import makeWorkExperienceCard from "./components/WorkExperienceCard";
 import makeEmailIcon from "./components/EmailIcon";
@@ -17,208 +15,124 @@ import {
   skillsDataAtom,
 } from "./store";
 
-// --- FUNZIONE PER CREARE I PORTALI OLOGRAFICI ---
-function makeHoloSection(k, posVec2, sectionName, contentCallback) {
-  let iconSymbol = "●";
-  let neonColor = "#2de2e6"; // Ciano Default
-
-  const nameLower = sectionName.toLowerCase();
-  if (nameLower.includes("skills")) {
-    iconSymbol = "</>";
-    neonColor = "#ff0055"; // Rosso/Magenta
-  } else if (nameLower.includes("experience")) {
-    iconSymbol = "💼"; // Valigetta
-    neonColor = "#2de2e6"; // Ciano
-  } else if (nameLower.includes("projects")) {
-    iconSymbol = "🚀"; // Razzo
-    neonColor = "#f9f871"; // Giallo
-  } else if (nameLower.includes("about")) {
-    iconSymbol = "☺"; // Faccina
-    neonColor = "#bd93f9"; // Viola
-  }
-
-  // 1. Creazione del Portale (Quadrato)
-  const section = k.add([
-    k.rect(160, 160, { radius: 16 }),
-    k.anchor("center"),
-    k.area(),
-    k.pos(posVec2),
-    k.color(k.Color.fromHex("#0b0c15")), // Sfondo Scuro
-    k.opacity(0.8),
-    k.outline(4, k.Color.fromHex(neonColor)), // Bordo Neon
-    sectionName,
-    "portal_button"
-  ]);
-
-  // 2. Icona gigante sullo sfondo (Watermark)
-  section.add([
-    k.text(iconSymbol, { font: "ibm-bold", size: 80 }),
-    k.anchor("center"),
-    k.color(k.Color.fromHex(neonColor)),
-    k.opacity(0.25),
-    k.pos(0, -10),
-  ]);
-
-  // 3. Etichetta Testo (sotto il box)
-  section.add([
-    k.text(sectionName, { font: "ibm-bold", size: 24 }),
-    k.color(k.Color.fromHex("#ffffff")),
-    k.anchor("center"),
-    k.pos(0, 110),
-  ]);
-
-  // 4. Animazione Respiro
-  section.onUpdate(() => {
-    const t = k.time() * 3;
-    section.opacity = 0.8 + Math.sin(t) * 0.1;
-  });
-
-  // 5. Animazione Hover Mouse
-  section.onHover(() => {
-    k.setCursor("pointer");
-    section.use(k.scale(1.1));
-    section.color = k.Color.fromHex(neonColor);
-    section.opacity = 0.2;
-  });
-
-  section.onHoverEnd(() => {
-    k.setCursor("default");
-    section.use(k.scale(1));
-    section.color = k.Color.fromHex("#0b0c15");
-    section.opacity = 0.8;
-  });
-
-  // 6. LOGICA DI COLLISIONE
-  if (contentCallback) {
-    const onCollideHandler = section.onCollide("player", () => {
-      contentCallback(section); 
-      onCollideHandler.cancel(); 
-    });
-  }
-
-  return section;
-}
-
 export default async function initGame() {
+  // --- 1. DATA LOADING ---
+  // Load configuration and content from JSON files
+  const theme = await (await fetch("./configs/theme.json")).json();
   const generalData = await (await fetch("./configs/generalData.json")).json();
   const skillsData = await (await fetch("./configs/skillsData.json")).json();
   const socialsData = await (await fetch("./configs/socialsData.json")).json();
-  const experiencesData = await (
-    await fetch("./configs/experiencesData.json")
-  ).json();
-  const projectsData = await (
-    await fetch("./configs/projectsData.json")
-  ).json();
+  const experiencesData = await (await fetch("./configs/experiencesData.json")).json();
+  const projectsData = await (await fetch("./configs/projectsData.json")).json();
 
+  // --- 2. THEME APPLICATION ---
+  // Apply theme colors to CSS variables for React UI components
+  const root = document.documentElement;
+  root.style.setProperty("--color1", theme.colors.background); 
+  root.style.setProperty("--color2", theme.colors.primary);    
+  root.style.setProperty("--color3", theme.colors.text);       
+
+  // Store skills data for the React Modal
   store.set(skillsDataAtom, skillsData);
 
+  // Initialize Kaplay context
   const k = makeKaplayCtx();
 
-  // --- ASSETS ---
+  // --- 3. DYNAMIC ASSET LOADING ---
+  // Avoid duplicate loading
+  const loadedAssets = new Set(); 
+  
+  const loadAsset = (name, path) => {
+    if (!name || loadedAssets.has(name)) return;
+    k.loadSprite(name, path);
+    loadedAssets.add(name);
+  };
+
+  // Load Skills logos
+  skillsData.forEach(skill => {
+    if (skill.logoData?.name) loadAsset(skill.logoData.name, `./logos/${skill.logoData.name}.png`);
+  });
+  
+  // Load Socials logos
+  socialsData.forEach(social => {
+    if (social.logoData?.name) loadAsset(social.logoData.name, `./logos/${social.logoData.name}.png`);
+  });
+  
+  // Load Project thumbnails
+  projectsData.forEach(project => {
+    if (project.thumbnail) loadAsset(project.thumbnail, `./projects/${project.thumbnail}.png`);
+  });
+
+  // Load Core Assets (Player, Fonts, Shader, Audio)
   k.loadSprite("player", "./sprites/player.png", {
-    sliceX: 4,
-    sliceY: 8,
+    sliceX: 4, sliceY: 8,
     anims: {
-      "walk-down-idle": 0,
-      "walk-down": { from: 0, to: 3, loop: true },
-      "walk-left-down": { from: 4, to: 7, loop: true },
-      "walk-left-down-idle": 4,
-      "walk-left": { from: 8, to: 11, loop: true },
-      "walk-left-idle": 8,
-      "walk-left-up": { from: 12, to: 15, loop: true },
-      "walk-left-up-idle": 12,
-      "walk-up": { from: 16, to: 19, loop: true },
-      "walk-up-idle": 16,
-      "walk-right-up": { from: 20, to: 23, loop: true },
-      "walk-right-up-idle": 20,
-      "walk-right": { from: 24, to: 27, loop: true },
-      "walk-right-idle": 24,
-      "walk-right-down": { from: 28, to: 31, loop: true },
-      "walk-right-down-idle": 28,
+      "walk-down-idle": 0, "walk-down": { from: 0, to: 3, loop: true },
+      "walk-left-down": { from: 4, to: 7, loop: true }, "walk-left-down-idle": 4,
+      "walk-left": { from: 8, to: 11, loop: true }, "walk-left-idle": 8,
+      "walk-left-up": { from: 12, to: 15, loop: true }, "walk-left-up-idle": 12,
+      "walk-up": { from: 16, to: 19, loop: true }, "walk-up-idle": 16,
+      "walk-right-up": { from: 20, to: 23, loop: true }, "walk-right-up-idle": 20,
+      "walk-right": { from: 24, to: 27, loop: true }, "walk-right-idle": 24,
+      "walk-right-down": { from: 28, to: 31, loop: true }, "walk-right-down-idle": 28,
     },
   });
 
   k.loadFont("ibm-regular", "./fonts/IBMPlexSans-Regular.ttf");
   k.loadFont("ibm-bold", "./fonts/IBMPlexSans-Bold.ttf");
-  
-  // Loghi
-  k.loadSprite("github-logo", "./logos/github-logo.png");
-  k.loadSprite("linkedin-logo", "./logos/linkedin-logo.png");
-  k.loadSprite("azure-logo", "./logos/azure-logo.png");
-  k.loadSprite("azuredevops-logo", "./logos/azuredevops-logo.png");
-  k.loadSprite("csharp-logo", "./logos/csharp-logo.png");
-  k.loadSprite("javascript-logo", "./logos/javascript-logo.png");
-  k.loadSprite("typescript-logo", "./logos/typescript-logo.png");
-  k.loadSprite("react-logo", "./logos/react-logo.png");
-  k.loadSprite("docker-logo", "./logos/docker-logo.png");
-  k.loadSprite("langchain-logo", "./logos/langchain-logo.png");
-  k.loadSprite("langsmith-logo", "./logos/langsmith-logo.png");
-  k.loadSprite("html-logo", "./logos/html-logo.png");
-  k.loadSprite("css-logo", "./logos/css-logo.png");
-  k.loadSprite("promptflow-logo", "./logos/promptflow-logo.png");
-  k.loadSprite("python-logo", "./logos/python-logo.png");
-  k.loadSprite("email-logo", "./logos/email-logo.png");
-  k.loadSprite("netcore-logo", "./logos/netcore-logo.png");
-  k.loadSprite("TarnishedMindMap", "./projects/TarnishedMindMap.png");
-  
   k.loadShaderURL("tiledPattern", null, "./shaders/tiledPattern.frag");
-
-  // Audio
+  
   k.loadSound("bgm", "./audio/background-music.mp3");
   k.loadSound("flip", "./audio/flip.mp3");
   k.loadSound("match", "./audio/match.mp3");
 
+  // --- 4. GAME LOGIC & AUDIO ---
   let bgm = null;
   let musicStarted = false;
 
   function startBGM() {
     if (!musicStarted) {
-      bgm = k.play("bgm", {
-        loop: true,
-        volume: store.get(musicVolumeAtom),
-      });
+      // Resume audio context if suspended (common browser behavior)
+      if (k.audioCtx && k.audioCtx.state === "suspended") {
+         k.audioCtx.resume();
+      }
+      bgm = k.play("bgm", { loop: true, volume: store.get(musicVolumeAtom) });
       musicStarted = true;
     }
   }
 
+  // Audio start listeners (Mouse, Keyboard, Touch for mobile)
   k.onKeyPress(startBGM);
   k.onMousePress(startBGM);
+  k.onTouchStart(startBGM); 
+  k.onTouchEnd(startBGM);   
 
-  k.onUpdate(() => {
-    if (bgm) bgm.volume = store.get(musicVolumeAtom);
-  });
+  // Update music volume
+  k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
 
-  // --- NUOVA LOGICA DI PAUSA PLAYER ---
-  // Controlla costantemente se il modale è aperto e congela il player
+  // --- 5. PLAYER PAUSE LOGIC ---
+  // Freezes the player when a React Modal is open (e.g. Skills)
   k.onUpdate(() => {
     const isSkillsOpen = store.get(isSkillsModalVisibleAtom);
     const player = k.get("player")[0];
     
     if (player) {
       if (isSkillsOpen) {
-        // Se il modale è aperto, mettiamo in pausa il player
         if (!player.paused) {
-          player.moveTo(player.pos); // Stop movimento
-          player.play("walk-down-idle"); // Stop animazione
-          player.paused = true; // Congela aggiornamenti
+          player.moveTo(player.pos); // Stop movement target
+          player.play("walk-down-idle"); // Stop animation
+          player.paused = true; // Freeze updates
         }
-      } else {
-        // Se il modale è chiuso, riattiviamo il player
-        if (player.paused) {
-          player.paused = false;
-        }
+      } else if (player.paused) {
+        player.paused = false; // Unfreeze
       }
     }
   });
 
+  // --- 6. CAMERA SETTINGS ---
   const setInitCamZoomValue = () => {
-    if (k.width() < 1000) {
-      k.camScale(k.vec2(0.5));
-      store.set(cameraZoomValueAtom, 0.5);
-      return;
-    }
-    k.camScale(k.vec2(0.8));
-    store.set(cameraZoomValueAtom, 0.8);
+    if (k.width() < 1000) { k.camScale(k.vec2(0.5)); store.set(cameraZoomValueAtom, 0.5); return; }
+    k.camScale(k.vec2(0.8)); store.set(cameraZoomValueAtom, 0.8);
   };
   setInitCamZoomValue();
 
@@ -227,13 +141,13 @@ export default async function initGame() {
     if (cameraZoomValue !== k.camScale().x) k.camScale(k.vec2(cameraZoomValue));
   });
 
-  // --- BACKGROUND SHADER ---
+  // --- 7. BACKGROUND SHADER ---
   const tiledBackground = k.add([
     k.uvquad(k.width(), k.height()),
     k.shader("tiledPattern", () => ({
       u_time: k.time() / 15,
-      u_color1: k.Color.fromHex("#0b0c15"), 
-      u_color2: k.Color.fromHex("#2de2e6"), 
+      u_color1: k.Color.fromHex(theme.colors.background), // Dynamic Theme Color
+      u_color2: k.Color.fromHex(theme.colors.primary),    // Dynamic Theme Color
       u_speed: k.vec2(0.3, -0.3),
       u_aspect: k.width() / k.height(),
       u_size: 10,
@@ -248,7 +162,9 @@ export default async function initGame() {
     tiledBackground.uniform.u_aspect = k.width() / k.height();
   });
 
-  // --- SEZIONE 1: HEADER & SOCIALS ---
+  // --- 8. GAME SECTIONS ---
+  
+  // SECTION 1: HEADER & SOCIALS
   makeSection(
     k,
     k.vec2(k.center().x, k.center().y - 400),
@@ -257,17 +173,14 @@ export default async function initGame() {
       const container = parent.add([k.pos(-805, -700), k.opacity(0)]);
       container.add([
         k.text(generalData.header.title, { font: "ibm-bold", size: 40 }),
-        k.color(k.Color.fromHex("#ffffff")), 
+        k.color(k.Color.fromHex(theme.colors.text)), 
         k.pos(395, 0),
         k.opacity(0),
       ]);
 
       container.add([
-        k.text(generalData.header.subtitle, {
-          font: "ibm-bold",
-          size: 20,
-        }),
-        k.color(k.Color.fromHex("#2de2e6")), 
+        k.text(generalData.header.subtitle, { font: "ibm-bold", size: 20 }),
+        k.color(k.Color.fromHex(theme.colors.primary)), 
         k.pos(400, 50),
         k.opacity(0),
       ]);
@@ -282,7 +195,8 @@ export default async function initGame() {
             k.vec2(socialData.pos.x, socialData.pos.y),
             socialData.logoData,
             socialData.name,
-            socialData.address
+            socialData.address,
+            theme
           );
           continue;
         }
@@ -294,28 +208,27 @@ export default async function initGame() {
           socialData.logoData,
           socialData.name,
           socialData.link,
-          socialData.description
+          socialData.description,
+          theme
         );
       }
-
       makeAppear(k, container);
       makeAppear(k, socialContainer);
-    }
+    },
+    theme // Pass theme for dynamic styling
   );
 
-  // --- SEZIONE 2: SKILLS ---
-  makeHoloSection(
+  // SECTION 2: SKILLS (Opens React Modal)
+  makeSection(
     k,
     k.vec2(k.center().x - 400, k.center().y),
     generalData.section2Name,
-    () => {
-        // Apriamo il modale. La logica di pausa è gestita sopra in k.onUpdate
-        store.set(isSkillsModalVisibleAtom, true);
-    }
+    () => { store.set(isSkillsModalVisibleAtom, true); }, // Collision callback
+    theme
   );
 
-  // --- SEZIONE 3: WORK EXPERIENCE ---
-  makeHoloSection(
+  // SECTION 3: WORK EXPERIENCE
+  makeSection(
     k,
     k.vec2(k.center().x + 400, k.center().y),
     generalData.section3Name,
@@ -327,15 +240,17 @@ export default async function initGame() {
           container,
           k.vec2(experienceData.pos.x, experienceData.pos.y),
           experienceData.cardHeight,
-          experienceData.roleData
+          experienceData.roleData,
+          theme // Pass theme to cards
         );
       }
       makeAppear(k, container);
-    }
+    },
+    theme
   );
 
-  // --- SEZIONE 4: PROJECTS ---
-  makeHoloSection(
+  // SECTION 4: PROJECTS
+  makeSection(
     k,
     k.vec2(k.center().x, k.center().y + 400),
     generalData.section4Name,
@@ -347,12 +262,15 @@ export default async function initGame() {
           container,
           k.vec2(project.pos.x, project.pos.y),
           project.data,
-          project.thumbnail
+          project.thumbnail,
+          theme // Pass theme to cards
         );
       }
       makeAppear(k, container);
-    }
+    },
+    theme
   );
 
+  // Initialize Player
   makePlayer(k, k.vec2(k.center()), 700);
 }

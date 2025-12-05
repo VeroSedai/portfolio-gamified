@@ -1,6 +1,4 @@
-import { PALETTE } from "../constants";
-
-export default function makeIcon(k, parent, posVec2, imageData, subtitle) {
+export default function makeIcon(k, parent, posVec2, imageData, subtitle, theme) {
   const icon = parent.add([
     k.sprite(imageData.name, {
       width: imageData.width,
@@ -12,9 +10,11 @@ export default function makeIcon(k, parent, posVec2, imageData, subtitle) {
     k.offscreen({ hide: true, distance: 300 }),
   ]);
 
+  const textColor = theme?.colors?.text || "#ffffff";
+
   const subtitleText = icon.add([
     k.text(subtitle, { font: "ibm-bold", size: 32 }),
-    k.color(k.Color.fromHex(PALETTE.color1)),
+    k.color(k.Color.fromHex(textColor)), 
     k.anchor("center"),
     k.pos(0, 100),
     k.opacity(0),
