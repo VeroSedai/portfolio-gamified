@@ -31,5 +31,6 @@ export const isAboutModalVisibleAtom = atom(false);
 export const aboutDataAtom = atom(null);
 export const socialsDataAtom = atom([]); 
 export const themeAtom = atom(null);
+export const sfxTriggerAtom = atom({ name: "", id: 0 });
 
 export const store = createStore();
