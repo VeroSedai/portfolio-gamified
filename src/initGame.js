@@ -20,6 +20,7 @@ export default async function initGame() {
   // --- 1. DATA LOADING ---
   const theme = await (await fetch("./configs/theme.json")).json();
   const generalData = await (await fetch("./configs/generalData.json")).json();
+  const layoutData = await (await fetch("./configs/layoutData.json")).json(); 
   const skillsData = await (await fetch("./configs/skillsData.json")).json();
   const socialsData = await (await fetch("./configs/socialsData.json")).json();
   const experiencesData = await (await fetch("./configs/experiencesData.json")).json();
@@ -94,6 +95,7 @@ export default async function initGame() {
 
   // --- 6. PLAYER PAUSE LOGIC ---
   k.onUpdate(() => {
+    // Check if ANY modal is visible using the atom list
     const isSkills = store.get(isSkillsModalVisibleAtom);
     const isWork = store.get(isWorkExperienceModalVisibleAtom);
     const isProj = store.get(isProjectGalleryVisibleAtom);
@@ -144,59 +146,55 @@ export default async function initGame() {
     tiledBackground.uniform.u_aspect = k.width() / k.height();
   });
 
-  // --- 9. GAME SECTIONS ---
+  // --- 9. DYNAMIC SECTIONS GENERATION ---
+  
+  const atomMap = {
+    "about": isAboutModalVisibleAtom,
+    "skills": isSkillsModalVisibleAtom,
+    "work": isWorkExperienceModalVisibleAtom,
+    "projects": isProjectGalleryVisibleAtom
+  };
 
-  // SECTION 1: ABOUT
-  makeSection(
-    k,
-    k.vec2(k.center().x, k.center().y - 400),
-    generalData.section1Name, 
-    (section) => {
-        store.set(isAboutModalVisibleAtom, true);
+  // Loop through layout in JSON to build the world
+  if (layoutData.sections) {
+    layoutData.sections.forEach(config => {
+      
+      const colorHex = theme.colors[config.colorKey] || theme.colors.primary;
+      const targetAtom = atomMap[config.id];
 
-        if (section.hasDrawnContent) return;
-        section.hasDrawnContent = true;
+      // All portals are now modals, so we want them re-openable (triggerOnce = false)
+      const triggerOnce = false;
 
-        section.add([
-          k.text(generalData.header.title, { font: "ibm-bold", size: 30 }),
-          k.color(k.Color.fromHex(theme.colors.text)),
-          k.anchor("center"),
-          k.pos(0, -130), 
-        ]);
-    }, 
-    theme,
-    false 
-  );
+      makeSection(
+        k,
+        k.vec2(k.center().x + config.position.x, k.center().y + config.position.y),
+        config.title,
+        config.icon,
+        colorHex,
+        (sectionObj) => {
+          
+          // Open the specific modal
+          if (targetAtom) {
+            store.set(targetAtom, true);
+          }
 
-  // SECTION 2: SKILLS
-  makeSection(
-    k,
-    k.vec2(k.center().x - 400, k.center().y),
-    generalData.section2Name,
-    () => { store.set(isSkillsModalVisibleAtom, true); }, 
-    theme,
-    false 
-  );
+          // Special Header drawing for "About"
+          if (config.type === "special_about") {
+             if (sectionObj.hasDrawnContent) return;
+             sectionObj.hasDrawnContent = true;
 
-  // SECTION 3: WORK EXPERIENCE
-  makeSection(
-    k,
-    k.vec2(k.center().x + 400, k.center().y),
-    generalData.section3Name,
-    () => { store.set(isWorkExperienceModalVisibleAtom, true); }, 
-    theme,
-    false 
-  );
-
-  // SECTION 4: PROJECTS
-  makeSection(
-    k,
-    k.vec2(k.center().x, k.center().y + 400),
-    generalData.section4Name,
-    () => { store.set(isProjectGalleryVisibleAtom, true); },
-    theme,
-    false 
-  );
+             sectionObj.add([
+                k.text(generalData.header.title, { font: "ibm-bold", size: 30 }),
+                k.color(k.Color.fromHex(theme.colors.text)),
+                k.anchor("center"),
+                k.pos(0, -130), 
+             ]);
+          }
+        },
+        triggerOnce 
+      );
+    });
+  }
 
   makePlayer(k, k.vec2(k.center()), 700);
 }
