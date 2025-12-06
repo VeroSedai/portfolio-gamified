@@ -1,11 +1,6 @@
 import makeKaplayCtx from "./kaplayCtx";
 import makePlayer from "./entities/Player";
 import makeSection from "./components/Section";
-import { makeAppear } from "./utils";
-// We import these only for the About section static drawing, if needed
-import makeSocialIcon from "./components/SocialIcon";
-import makeEmailIcon from "./components/EmailIcon";
-import makeProjectCard from "./components/ProjectCard";
 
 import {
   musicVolumeAtom,
