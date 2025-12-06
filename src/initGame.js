@@ -1,6 +1,12 @@
 import makeKaplayCtx from "./kaplayCtx";
 import makePlayer from "./entities/Player";
 import makeSection from "./components/Section";
+import { makeAppear } from "./utils";
+// We import these only for the About section static drawing, if needed
+import makeSocialIcon from "./components/SocialIcon";
+import makeEmailIcon from "./components/EmailIcon";
+import makeProjectCard from "./components/ProjectCard";
+
 import {
   musicVolumeAtom,
   sfxVolumeAtom,
@@ -106,7 +112,6 @@ export default async function initGame() {
   
   if (theme.audio && theme.audio.sfx) {
     for (const [key, filename] of Object.entries(theme.audio.sfx)) {
-      // NOTE: We rely on the key being the name (e.g. 'flip')
       loadPromises.push(loadSoundSafe(k, key, `/audio/${filename}`));
     }
   }
@@ -114,7 +119,6 @@ export default async function initGame() {
   // 2. Playlist (BGM)
   const playlist = theme.audio?.playlist || ["background-music.mp3"]; 
   playlist.forEach((trackName) => {
-    // CRITICAL: We load sound using the filename as the ID
     loadPromises.push(loadSoundSafe(k, trackName, `/audio/${trackName}`)); 
   });
 
@@ -124,13 +128,14 @@ export default async function initGame() {
   // --- 5. AUDIO SYSTEM ---
   let currentTrackIndex = 0;
   let bgm = null;
-  let musicStarted = false;
+  let musicStarted = false; // Flag to track if music has successfully started
 
   function playTrack(index) {
     if (bgm) bgm.stop();
     const trackName = playlist[index];
     
     try {
+        console.log(`[BGM] Attempting to play: ${trackName}`);
         bgm = k.play(trackName, { 
             loop: false, 
             volume: store.get(musicVolumeAtom) 
@@ -140,33 +145,48 @@ export default async function initGame() {
             currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
             playTrack(currentTrackIndex);
         });
+        
+        return true; // Success
     } catch (e) {
-        console.warn(`[BGM Error] Failed to play track: ${trackName}. Skipping.`, e);
+        console.warn(`[BGM Error] Failed to play track: ${trackName}`, e);
+        // Try next track if this one fails
         if (playlist.length > 1) {
             currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
-            playTrack(currentTrackIndex);
+            // Use setTimeout to avoid infinite recursion stack overflow if all fail
+            setTimeout(() => playTrack(currentTrackIndex), 100); 
         }
+        return false; // Failed
     }
   }
 
-  function startBGM() {
-    if (musicStarted) return;
-    
+  // GLOBAL AUDIO UNLOCKER
+  // Attaches to window events to ensure we catch the very first interaction
+  const attemptStartBGM = () => {
+    if (musicStarted) return; // Already running
+
+    // Resume context if suspended (Mobile browser requirement)
     if (k.audioCtx && k.audioCtx.state === "suspended") {
-        k.audioCtx.resume();
+        k.audioCtx.resume().catch(e => console.warn("Audio resume failed", e));
     }
     
     if (playlist.length > 0) {
-        playTrack(currentTrackIndex);
-        musicStarted = true;
+        const success = playTrack(currentTrackIndex);
+        if (success) {
+            musicStarted = true;
+            // Clean up listeners once music starts
+            window.removeEventListener("touchstart", attemptStartBGM);
+            window.removeEventListener("click", attemptStartBGM);
+            window.removeEventListener("keydown", attemptStartBGM);
+        }
     }
-  }
+  };
 
-  // Inputs to start audio
-  k.onKeyPress(startBGM);
-  k.onMousePress(startBGM);
-  k.onTouchStart(startBGM); 
-  k.onTouchEnd(startBGM);   
+  // Add listeners to global window for maximum compatibility
+  window.addEventListener("touchstart", attemptStartBGM);
+  window.addEventListener("click", attemptStartBGM);
+  window.addEventListener("keydown", attemptStartBGM);
+
+  // Sync volume updates
   k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
 
   // 5b. SFX BRIDGE (React -> Kaplay)
@@ -174,7 +194,6 @@ export default async function initGame() {
     const sfx = store.get(sfxTriggerAtom);
     if (sfx && sfx.name) {
        try {
-         // SFX name matches the file name ID defined in loadSoundSafe
          k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
        } catch (e) {
          console.warn("SFX error:", e);
