@@ -1,7 +1,6 @@
 import makeKaplayCtx from "./kaplayCtx";
 import makePlayer from "./entities/Player";
 import makeSection from "./components/Section";
-
 import {
   musicVolumeAtom,
   sfxVolumeAtom,
@@ -35,7 +34,7 @@ const safeFetch = async (path) => {
 export default async function initGame() {
   // --- 1. DATA LOADING ---
   const theme = await safeFetch("./configs/theme.json");
-  const aboutData = await safeFetch("./configs/aboutData.json"); // <--- Renamed from generalData
+  const aboutData = await safeFetch("./configs/aboutData.json");
   const layoutData = await safeFetch("./configs/layoutData.json"); 
   const playerData = await safeFetch("./configs/playerData.json"); 
   
@@ -55,81 +54,82 @@ export default async function initGame() {
   store.set(skillsDataAtom, skillsData);
   store.set(workExperienceDataAtom, experiencesData);
   store.set(projectsDataAtom, projectsData);
-  store.set(aboutDataAtom, aboutData); // <--- Store variable updated
+  store.set(aboutDataAtom, aboutData); 
   store.set(socialsDataAtom, socialsData); 
   store.set(themeAtom, theme); 
 
   const k = makeKaplayCtx();
 
   // --- 4. DYNAMIC ASSET LOADING ---
+  const loadPromises = []; 
   const loadedAssets = new Set(); 
+  
   const loadAsset = (name, path) => {
     if (!name || loadedAssets.has(name)) return;
-    k.loadSprite(name, path);
+    loadPromises.push(k.loadSprite(name, path));
     loadedAssets.add(name);
   };
 
-  // Load Sprites
+  // Sprite Loading
   if (Array.isArray(skillsData)) skillsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `./logos/${s.logoData.name}.png`));
   if (Array.isArray(socialsData)) socialsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `./logos/${s.logoData.name}.png`));
   if (Array.isArray(projectsData)) projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `./projects/${p.thumbnail}.png`));
 
   // Load Player Sprite
   const spriteName = playerData.sprite || "player";
-  k.loadSprite("player", `./sprites/${spriteName}.png`, {
+  loadPromises.push(k.loadSprite("player", `./sprites/${spriteName}.png`, {
     sliceX: playerData.sliceX || 4,
     sliceY: playerData.sliceY || 8,
     anims: playerData.anims || { "walk-down-idle": 0 },
-  });
+  }));
 
   // Load Fonts & Shader
   k.loadFont("ibm-regular", "./fonts/IBMPlexSans-Regular.ttf");
   k.loadFont("ibm-bold", "./fonts/IBMPlexSans-Bold.ttf");
   k.loadShaderURL("tiledPattern", null, "./shaders/tiledPattern.frag");
   
-  // --- AUDIO LOADING (FIXED PATHS) ---
-  // We use absolute paths /audio/ to avoid issues with relative resolution
+  // --- AUDIO LOADING (ROBUST) ---
   
-  // 1. SFX (Defaults + Dynamic)
-  k.loadSound("flip", "/audio/flip.mp3");
-  k.loadSound("match", "/audio/match.mp3");
+  // Helper to load sound safely
+  const loadSoundSafe = (k, id, path) => {
+    return new Promise((resolve) => {
+        k.loadSound(id, path).then(resolve).catch(e => {
+            console.warn(`[Audio Skipped] ID: ${id}, Path: ${path}`, e);
+            resolve(); // Resolve anyway to not block the game
+        });
+    });
+  };
+
+  // 1. SFX: Load flip and match directly with their simple IDs
+  loadPromises.push(loadSoundSafe(k, "flip", "/audio/flip.mp3"));
+  loadPromises.push(loadSoundSafe(k, "match", "/audio/match.mp3"));
   
   if (theme.audio && theme.audio.sfx) {
     for (const [key, filename] of Object.entries(theme.audio.sfx)) {
-      k.loadSound(key, `/audio/${filename}`);
+      // NOTE: We rely on the key being the name (e.g. 'flip')
+      loadPromises.push(loadSoundSafe(k, key, `/audio/${filename}`));
     }
   }
 
   // 2. Playlist (BGM)
-  const playlist = theme.audio?.playlist || ["background-music.mp3"]; // Fallback default
+  const playlist = theme.audio?.playlist || ["background-music.mp3"]; 
   playlist.forEach((trackName) => {
-    k.loadSound(trackName, `/audio/${trackName}`);
+    // CRITICAL: We load sound using the filename as the ID
+    loadPromises.push(loadSoundSafe(k, trackName, `/audio/${trackName}`)); 
   });
 
+  // --- WAIT FOR ALL ASSETS ---
+  await Promise.all(loadPromises);
+  
   // --- 5. AUDIO SYSTEM ---
   let currentTrackIndex = 0;
   let bgm = null;
   let musicStarted = false;
 
-  function startBGM() {
-    if (musicStarted) return;
-    
-    // Attempt to unlock Audio Context
-    if (k.audioCtx && k.audioCtx.state === "suspended") {
-        k.audioCtx.resume();
-    }
-    
-    if (playlist.length > 0) {
-        playTrack(currentTrackIndex);
-        musicStarted = true;
-    }
-  }
-
   function playTrack(index) {
     if (bgm) bgm.stop();
     const trackName = playlist[index];
     
-    // Check if sound loaded successfully before playing to avoid errors
     try {
         bgm = k.play(trackName, { 
             loop: false, 
@@ -141,7 +141,24 @@ export default async function initGame() {
             playTrack(currentTrackIndex);
         });
     } catch (e) {
-        console.warn("Could not play track:", trackName, e);
+        console.warn(`[BGM Error] Failed to play track: ${trackName}. Skipping.`, e);
+        if (playlist.length > 1) {
+            currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+            playTrack(currentTrackIndex);
+        }
+    }
+  }
+
+  function startBGM() {
+    if (musicStarted) return;
+    
+    if (k.audioCtx && k.audioCtx.state === "suspended") {
+        k.audioCtx.resume();
+    }
+    
+    if (playlist.length > 0) {
+        playTrack(currentTrackIndex);
+        musicStarted = true;
     }
   }
 
@@ -152,11 +169,12 @@ export default async function initGame() {
   k.onTouchEnd(startBGM);   
   k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
 
-  // --- 5b. SFX BRIDGE (React -> Kaplay) ---
+  // 5b. SFX BRIDGE (React -> Kaplay)
   store.sub(sfxTriggerAtom, () => {
     const sfx = store.get(sfxTriggerAtom);
     if (sfx && sfx.name) {
        try {
+         // SFX name matches the file name ID defined in loadSoundSafe
          k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
        } catch (e) {
          console.warn("SFX error:", e);
@@ -195,7 +213,7 @@ export default async function initGame() {
     if (val !== k.camScale().x) k.camScale(k.vec2(val));
   });
 
-  // --- 8. BACKGROUND SHADER ---
+  // --- 8. DYNAMIC BACKGROUND RENDER ---
   const bgConfig = theme.background || { type: "shader", asset: "tiledPattern" };
   
   if (bgConfig.type === "image") {
