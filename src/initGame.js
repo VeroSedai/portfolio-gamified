@@ -35,7 +35,7 @@ const safeFetch = async (path) => {
 export default async function initGame() {
   // --- 1. DATA LOADING ---
   const theme = await safeFetch("./configs/theme.json");
-  const aboutData = await safeFetch("./configs/aboutData.json"); // <--- Renamed from generalData
+  const aboutData = await safeFetch("./configs/aboutData.json"); 
   const layoutData = await safeFetch("./configs/layoutData.json"); 
   const playerData = await safeFetch("./configs/playerData.json"); 
   
