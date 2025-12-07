@@ -4,8 +4,6 @@
 
 Turn your resume into an interactive game world. Designed as a generic template: logic is decoupled from content, allowing full customization via JSON configuration files.
 
-**🚀 Live Demo:** [Insert Link Here]
-
 ## ⚡ Key Features
 
 * **Hybrid Architecture:** React handles accessible UI overlays (Modals), while Kaplay.js handles the game loop, physics, and rendering.
