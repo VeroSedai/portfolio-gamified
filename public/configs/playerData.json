@@ -1,6 +1,7 @@
 {
-    "sprite": "player",
+    "sprite": "player_cyborg",
     "speed": 700,
+    "directions": 8, 
     "sliceX": 4,
     "sliceY": 8,
     "anims": {

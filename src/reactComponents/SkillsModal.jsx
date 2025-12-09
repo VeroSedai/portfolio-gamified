@@ -32,8 +32,7 @@ export default function SkillsModal() {
   const playAudio = (key) => {
     try {
       const filename = theme?.audio?.sfx?.[key] || `${key}.mp3`;
-      // Use BASE_URL for audio path too
-      const audioPath = `${import.meta.env.BASE_URL}audio/${filename}`;
+      const audioPath = `${import.meta.env.BASE_URL}/audio/${filename}`;
       const audio = new Audio(audioPath);
       audio.volume = sfxVolume; 
       audio.play().catch(e => console.warn("Audio play blocked", e));
