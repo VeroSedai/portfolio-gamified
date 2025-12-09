@@ -4,72 +4,133 @@ export default function makeSection(
   k, 
   posVec2, 
   title, 
-  iconSymbol,
-  colorHex, 
+  iconSymbol, 
+  colorHex,   
   onCollide = null, 
   triggerOnce = true 
 ) {
   
-  // Default background color
-  const bgHex = "#0b0c15"; 
+  // Derived colors for 3D effect
+  const mainColor = k.Color.fromHex(colorHex);
+  const darkColor = k.Color.fromHex(colorHex).darken(100);
+  const glowColor = k.Color.fromHex(colorHex);
 
+  // 1. MAIN CONTAINER
   const section = k.add([
-    k.rect(160, 160, { radius: 16 }),
+    k.pos(posVec2.x, posVec2.y), 
+    k.circle(70), // Base shape for collision area
+    k.color(0, 0, 0, 0), // Fully transparent
+    k.area(), // Auto-generates hitbox based on k.circle
     k.anchor("center"),
-    k.area(), 
-    k.pos(posVec2),
-    
-    k.color(k.Color.fromHex(bgHex)), 
-    k.opacity(0.8),
-    k.outline(4, k.Color.fromHex(colorHex)),
-
-    title, // Tag for debugging
+    title, 
     "portal_button"
   ]);
 
-  // Icon Center
-  section.add([
-    k.text(iconSymbol, { font: "ibm-bold", size: 80 }),
+  // 2. TELEPORT EFFECT (Ripples under the button)
+  for (let i = 0; i < 2; i++) {
+    const ripple = section.add([
+      k.circle(10),
+      k.outline(4, glowColor),
+      k.color(0, 0, 0, 0), // Transparent interior
+      k.opacity(0.5),
+      k.anchor("center"),
+      k.z(-1), // Behind the button
+      "teleport_effect"
+    ]);
+
+    // Ripple animation
+    ripple.onUpdate(() => {
+      const t = k.time() * 2 + (i * 1.5); // Time offset between rings
+      const phase = t % 2; // Cycle between 0 and 2
+      
+      // Expansion
+      ripple.scale = k.vec2(1 + phase * 2); 
+      // Fade out while expanding
+      ripple.opacity = Math.max(0, 0.8 - (phase * 0.4));
+      // Reset outline thickness to prevent it from getting too huge
+      ripple.use(k.outline(4 / (1 + phase), glowColor));
+    });
+  }
+
+  // 3. BUTTON BASE (Dark body giving 3D height)
+  const btnBase = section.add([
+    k.circle(70),
+    k.color(darkColor),
     k.anchor("center"),
-    k.color(k.Color.fromHex(colorHex)),
-    k.opacity(0.25), 
-    k.pos(0, -10),
+    k.pos(0, 10), // Shifted down for depth
+    k.opacity(1)
   ]);
 
-  // Title Bottom
+  // 4. BUTTON SURFACE (The colored top part)
+  const btnTop = section.add([
+    k.circle(70),
+    k.color(0, 0, 0), // Black background
+    k.outline(6, mainColor), // Thick colored border
+    k.anchor("center"),
+    k.pos(0, 0), // Initial position (raised)
+    k.opacity(1)
+  ]);
+
+  // Glass-like semi-transparent fill
+  btnTop.add([
+    k.circle(64),
+    k.color(mainColor),
+    k.opacity(0.15),
+    k.anchor("center"),
+  ]);
+
+  // 5. CENTER ICON
+  btnTop.add([
+    k.text(iconSymbol, { font: "ibm-bold", size: 60 }),
+    k.anchor("center"),
+    k.color(mainColor),
+    k.opacity(0.9), 
+  ]);
+
+  // 6. TITLE 
   section.add([
-    k.text(title, { font: "ibm-bold", size: 24 }),
+    k.text(title, { font: "ibm-bold", size: 20 }),
     k.color(k.Color.WHITE), 
     k.anchor("center"),
-    k.pos(0, 110),
+    k.pos(0, 100), 
+    k.opacity(0.8)
   ]);
 
-  // Animations
+  // --- FLOATING ANIMATION ---
+  // This makes the whole button gently breathe/wave
   section.onUpdate(() => {
     const t = k.time() * 3;
-    section.opacity = 0.8 + Math.sin(t) * 0.1; 
+    // Slight scale variation to feel alive
+    section.scale = k.vec2(1 + Math.sin(t) * 0.02);
   });
 
+  // --- MOUSE INTERACTION (Hover = Button Press) ---
   section.onHover(() => {
     k.setCursor("pointer");
-    section.use(k.scale(1.1));
-    section.color = k.Color.fromHex(colorHex); 
-    section.opacity = 0.2; 
+    // Visually press the button by moving the top part down
+    btnTop.pos.y = 5; 
+    btnTop.color = k.Color.fromHex("#1a1a1a"); // Slightly lighter on hover
+    // Increase ripple intensity
+    section.get("teleport_effect").forEach(r => r.opacity = 1);
   });
 
   section.onHoverEnd(() => {
     k.setCursor("default");
-    section.use(k.scale(1)); 
-    section.color = k.Color.fromHex(bgHex); 
-    section.opacity = 0.8;
+    // Release button (moves back up)
+    btnTop.pos.y = 0;
+    btnTop.color = k.Color.BLACK;
   });
 
-  // Collision Logic with Cooldown Fix
+  // --- COLLISION LOGIC ---
   let isCooldown = false; 
 
   if (onCollide) {
     const onCollideHandler = section.onCollide("player", () => {
       if (isCooldown) return;
+      
+      // Visual feedback: press button when player walks on it
+      btnTop.pos.y = 8;
+      k.wait(0.2, () => btnTop.pos.y = 0); // Release after a moment
 
       onCollide(section);
       
@@ -83,7 +144,7 @@ export default function makeSection(
     section.onCollideEnd("player", (p) => {
       if (p && p.paused) return; 
       if (!triggerOnce) {
-        isCooldown = false; // Reset cooldown only on real exit
+        isCooldown = false; 
       }
     });
   }

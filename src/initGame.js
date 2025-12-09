@@ -20,7 +20,7 @@ import {
   themeAtom
 } from "./store";
 
-// --- PATH HELPER FOR VITE PRODUCTION BUILD ---
+// --- PATH HELPER ---
 const resolvePath = (path) => {
   const baseUrl = import.meta.env.BASE_URL;
   const cleanPath = path.replace(/^\.?\//, "");
@@ -85,7 +85,7 @@ export default async function initGame() {
   if (Array.isArray(projectsData)) projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `projects/${p.thumbnail}.png`));
 
   // Load Player Sprite
-  const spriteName = playerData.sprite || "player";
+  const spriteName = playerData.sprite || "player_cyborg";
   loadPromises.push(k.loadSprite("player", resolvePath(`sprites/${spriteName}.png`), {
     sliceX: playerData.sliceX || 4,
     sliceY: playerData.sliceY || 8,
@@ -135,13 +135,11 @@ export default async function initGame() {
   function playTrack(index) {
     if (bgm) bgm.stop();
     const trackName = playlist[index];
-    
     try {
         bgm = k.play(trackName, { 
             loop: false, 
             volume: store.get(musicVolumeAtom) 
         });
-
         bgm.onEnd(() => {
             currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
             playTrack(currentTrackIndex);
@@ -155,20 +153,15 @@ export default async function initGame() {
     }
   }
 
-  // GLOBAL AUDIO UNLOCKER
   const attemptStartBGM = () => {
     if (musicStarted) return; 
-
     if (k.audioCtx && k.audioCtx.state === "suspended") {
         k.audioCtx.resume().catch(e => console.warn("Audio resume failed", e));
     }
-    
     if (playlist.length > 0) {
-        // Try starting the first track
         playTrack(currentTrackIndex);
         musicStarted = true;
-        
-        // Clean up
+        // Clean up listeners
         window.removeEventListener("touchstart", attemptStartBGM);
         window.removeEventListener("click", attemptStartBGM);
         window.removeEventListener("keydown", attemptStartBGM);
@@ -186,7 +179,6 @@ export default async function initGame() {
     const sfx = store.get(sfxTriggerAtom);
     if (sfx && sfx.name) {
        if (!musicStarted) attemptStartBGM(); 
-
        try {
          k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
        } catch (e) {
@@ -195,7 +187,10 @@ export default async function initGame() {
     }
   });
 
-  // --- 6. PLAYER PAUSE & CAMERA ---
+  // --- 6. PLAYER PAUSE LOGIC ---
+  
+  const pauseAnim = playerData.directions === 4 ? "idle" : "walk-down-idle";
+
   k.onUpdate(() => {
     const isSkills = store.get(isSkillsModalVisibleAtom);
     const isWork = store.get(isWorkExperienceModalVisibleAtom);
@@ -207,7 +202,13 @@ export default async function initGame() {
       if (isSkills || isWork || isProj || isAbout) {
         if (!player.paused) {
           player.moveTo(player.pos); 
-          player.play("walk-down-idle"); 
+          
+          try {
+             player.play(pauseAnim); 
+          } catch(e) {
+             console.warn("Pause anim missing, ignoring", e);
+          }
+          
           player.paused = true; 
         }
       } else if (player.paused) {
@@ -216,7 +217,7 @@ export default async function initGame() {
     }
   });
 
-  // FIX: Updated deprecated camScale to getCamScale / setCamScale
+  // --- 7. CAMERA ---
   const setInitCamZoomValue = () => {
     if (k.width() < 1000) { 
         k.setCamScale(k.vec2(0.5)); 
@@ -227,14 +228,13 @@ export default async function initGame() {
     store.set(cameraZoomValueAtom, 0.8);
   };
   setInitCamZoomValue();
-  
+
   k.onUpdate(() => {
     const val = store.get(cameraZoomValueAtom);
-    // Use getCamScale() to read current value
     if (val !== k.getCamScale().x) k.setCamScale(k.vec2(val));
   });
 
-  // --- 8. DYNAMIC BACKGROUND RENDER ---
+  // --- 8. BACKGROUND ---
   const bgConfig = theme.background || { type: "shader", asset: "tiledPattern" };
   
   if (bgConfig.type === "image") {
@@ -263,8 +263,7 @@ export default async function initGame() {
     });
   }
 
-  // --- 9. DYNAMIC SECTIONS GENERATION ---
-  
+  // --- 9. SECTIONS ---
   const atomMap = {
     "about": isAboutModalVisibleAtom,
     "skills": isSkillsModalVisibleAtom,
@@ -309,6 +308,5 @@ export default async function initGame() {
   }
 
   // --- CREATE PLAYER ---
-  const playerSpeed = playerData.speed || 700;
-  makePlayer(k, k.vec2(k.center()), playerSpeed);
+  makePlayer(k, k.vec2(k.center()), playerData);
 }
