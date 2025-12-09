@@ -89,14 +89,12 @@ export default async function initGame() {
   k.loadFont("ibm-bold", "./fonts/IBMPlexSans-Bold.ttf");
   k.loadShaderURL("tiledPattern", null, "./shaders/tiledPattern.frag");
   
-  // --- AUDIO LOADING (ROBUST) ---
-  
-  // Helper to load sound safely
+  // --- AUDIO LOADING ---
   const loadSoundSafe = (k, id, path) => {
     return new Promise((resolve) => {
         k.loadSound(id, path).then(resolve).catch(e => {
             console.warn(`[Audio Skipped] ID: ${id}, Path: ${path}`, e);
-            resolve(); // Resolve anyway to not block the game
+            resolve();
         });
     });
   };
@@ -114,6 +112,7 @@ export default async function initGame() {
   // 2. Playlist (BGM)
   const playlist = theme.audio?.playlist || ["background-music.mp3"]; 
   playlist.forEach((trackName) => {
+    // CRITICAL: We load sound using the filename as the ID
     loadPromises.push(loadSoundSafe(k, trackName, `/audio/${trackName}`)); 
   });
 
@@ -123,14 +122,13 @@ export default async function initGame() {
   // --- 5. AUDIO SYSTEM ---
   let currentTrackIndex = 0;
   let bgm = null;
-  let musicStarted = false; // Flag to track if music has successfully started
+  let musicStarted = false;
 
   function playTrack(index) {
     if (bgm) bgm.stop();
     const trackName = playlist[index];
     
     try {
-        console.log(`[BGM] Attempting to play: ${trackName}`);
         bgm = k.play(trackName, { 
             loop: false, 
             volume: store.get(musicVolumeAtom) 
@@ -140,55 +138,59 @@ export default async function initGame() {
             currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
             playTrack(currentTrackIndex);
         });
-        
-        return true; // Success
     } catch (e) {
-        console.warn(`[BGM Error] Failed to play track: ${trackName}`, e);
-        // Try next track if this one fails
+        console.warn(`[BGM Error] Failed to play track: ${trackName}.`, e);
         if (playlist.length > 1) {
             currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
-            // Use setTimeout to avoid infinite recursion stack overflow if all fail
-            setTimeout(() => playTrack(currentTrackIndex), 100); 
+            playTrack(currentTrackIndex);
         }
-        return false; // Failed
     }
   }
 
-  // GLOBAL AUDIO UNLOCKER
-  // Attaches to window events to ensure we catch the very first interaction
-  const attemptStartBGM = () => {
-    if (musicStarted) return; // Already running
-
-    // Resume context if suspended (Mobile browser requirement)
+  function startBGM() {
+    if (musicStarted) return;
+    
+    // Unlock Audio Context immediately
     if (k.audioCtx && k.audioCtx.state === "suspended") {
-        k.audioCtx.resume().catch(e => console.warn("Audio resume failed", e));
+        k.audioCtx.resume();
     }
     
     if (playlist.length > 0) {
-        const success = playTrack(currentTrackIndex);
-        if (success) {
-            musicStarted = true;
-            // Clean up listeners once music starts
-            window.removeEventListener("touchstart", attemptStartBGM);
-            window.removeEventListener("click", attemptStartBGM);
-            window.removeEventListener("keydown", attemptStartBGM);
+        playTrack(currentTrackIndex);
+        musicStarted = true;
+    }
+  }
+
+  // --- AUDIO TRIGGER STRATEGY: MOVEMENT ---
+  // Instead of relying on global clicks, we check every frame if the user is interacting
+  // (pressing keys or touching/clicking screen) to start the music.
+  k.onUpdate(() => {
+    // Sync volume
+    if (bgm) bgm.volume = store.get(musicVolumeAtom);
+
+    // If music hasn't started, check for ANY user input
+    if (!musicStarted) {
+        // We rely on isMouseDown() for touch/mouse interaction.
+        // Keyboard start is handled by k.onKeyPress(startBGM) below.
+        const isInteracting = k.isMouseDown();
+        if (isInteracting) {
+            startBGM();
         }
     }
-  };
+  });
 
-  // Add listeners to global window for maximum compatibility
-  window.addEventListener("touchstart", attemptStartBGM);
-  window.addEventListener("click", attemptStartBGM);
-  window.addEventListener("keydown", attemptStartBGM);
-
-  // Sync volume updates
-  k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
+  // Also bind explicit key press listener for non-mouse/touch users
+  k.onKeyPress(startBGM);
 
   // 5b. SFX BRIDGE (React -> Kaplay)
   store.sub(sfxTriggerAtom, () => {
     const sfx = store.get(sfxTriggerAtom);
     if (sfx && sfx.name) {
+       // Also ensure BGM starts if an SFX is triggered (e.g. user clicked a card first)
+       if (!musicStarted) startBGM();
+
        try {
+         // SFX name matches the file name ID defined in loadSoundSafe
          k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
        } catch (e) {
          console.warn("SFX error:", e);
