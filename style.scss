@@ -1,4 +1,4 @@
-/* PORTFOLIO GAME STYLE - SCSS */
+/* PORTFOLIO GAME STYLE - SCSS ORGANIZED */
 
 /* --- 1. FONTS --- */
 @font-face {
@@ -49,7 +49,7 @@ body, html {
   &-btn {
     width: 50px;
     height: 50px;
-    border-radius: 8px;
+    border-radius: 50%; 
     background-color: rgba(0, 0, 0, 0.6); 
     border: 1px solid var(--color2);
     color: var(--color2);
@@ -66,6 +66,11 @@ body, html {
       background-color: var(--color2);
       color: var(--color1);
       box-shadow: var(--neon-glow);
+    }
+    
+    &:hover {
+      background-color: rgba(45, 226, 230, 0.1);
+      box-shadow: 0 0 10px var(--color2);
     }
   }
 }
@@ -459,7 +464,7 @@ body, html {
     .stats-box {
       width: 100%; background: rgba(0,0,0,0.2); padding: 15px;
       border: 1px solid var(--color2);
-      border-radius: 8px;
+      border-radius: 8px; 
 
       h3 {
         color: var(--color2); margin: 0 0 10px 0;
@@ -472,7 +477,7 @@ body, html {
         .stat-label { width: 90px; color: var(--color3); }
         .stat-bar-container {
           flex-grow: 1; height: 8px; background: #333; 
-          border-radius: 4px;
+          border-radius: 4px; 
           overflow: hidden; border: none;
           .stat-bar-fill { height: 100%; background-color: var(--color2); box-shadow: 0 0 5px var(--color2); }
         }
@@ -540,12 +545,7 @@ body, html {
 @media (max-width: 600px) {
   /* Modals */
   .modal-content { padding: 1rem; width: 95%; max-height: 85vh; }
-  
-  /* Fix Modal Header Font Size for long titles */
-  .modal-header h1 { 
-    font-size: 1rem; /* Smaller font on mobile */
-    line-height: 1.4;
-  }
+  .modal-header h1 { font-size: 1.2rem; }
 
   /* Skills */
   .skills-modal .memory-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -571,26 +571,14 @@ body, html {
     .settings-panel.expanded { transform: translateY(0); }
   }
 
-  /* Camera Controller */
   .camera-controller {
     top: auto; bottom: 30px; right: 20px; gap: 15px;
 
     &-btn {
-      width: 45px; height: 45px; /* Match settings button size */
-      font-size: 1.4rem;
+      width: 60px; height: 60px; font-size: 1.5rem;
       border-radius: 50%; background-color: rgba(0,0,0,0.8); border-width: 2px;
     }
   }
-
-  /* Messages: Lowered and smaller */
-  .controls-message { 
-    top: auto; bottom: 100px; /* Moved down */
-    font-size: 0.8rem; 
-    width: 90%; 
-    opacity: 0.6; 
-  }
-  
-  .cp-message { bottom: 10px; font-size: 0.6rem; opacity: 0.5; }
 
   /* Hide old static music */
   .music-control { display: none !important; }
