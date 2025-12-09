@@ -19,27 +19,7 @@ import {
   sfxTriggerAtom,
   themeAtom
 } from "./store";
-
-// --- PATH HELPER ---
-const resolvePath = (path) => {
-  const baseUrl = import.meta.env.BASE_URL;
-  const cleanPath = path.replace(/^\.?\//, "");
-  const safeBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  return `${safeBase}${cleanPath}`;
-};
-
-// Helper for safe fetching
-const safeFetch = async (relativePath) => {
-  const fullPath = resolvePath(relativePath);
-  try {
-    const response = await fetch(fullPath);
-    if (!response.ok) throw new Error(`File missing: ${fullPath}`);
-    return await response.json();
-  } catch (e) {
-    console.error(`JSON Error ${fullPath}:`, e);
-    return {}; 
-  }
-};
+import { resolvePath, safeFetch } from "./utils";
 
 export default async function initGame() {
   // --- 1. DATA LOADING ---
@@ -85,7 +65,7 @@ export default async function initGame() {
   if (Array.isArray(projectsData)) projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `projects/${p.thumbnail}.png`));
 
   // Load Player Sprite
-  const spriteName = playerData.sprite || "player_cyborg";
+  const spriteName = playerData.sprite || "player";
   loadPromises.push(k.loadSprite("player", resolvePath(`sprites/${spriteName}.png`), {
     sliceX: playerData.sliceX || 4,
     sliceY: playerData.sliceY || 8,
@@ -145,40 +125,57 @@ export default async function initGame() {
             playTrack(currentTrackIndex);
         });
     } catch (e) {
-        console.warn(`[BGM Error] Failed to play track: ${trackName}`, e);
-        if (playlist.length > 1) {
-            currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
-            setTimeout(() => playTrack(currentTrackIndex), 100); 
-        }
+        console.warn(`[BGM Error]`, e);
     }
   }
 
-  const attemptStartBGM = () => {
-    if (musicStarted) return; 
-    if (k.audioCtx && k.audioCtx.state === "suspended") {
-        k.audioCtx.resume().catch(e => console.warn("Audio resume failed", e));
-    }
-    if (playlist.length > 0) {
-        playTrack(currentTrackIndex);
-        musicStarted = true;
-        // Clean up listeners
-        window.removeEventListener("touchstart", attemptStartBGM);
-        window.removeEventListener("click", attemptStartBGM);
-        window.removeEventListener("keydown", attemptStartBGM);
+  // --- AUDIO UNLOCKER ---
+  // This function tries to resume audio on direct user interactions ONLY.
+  // It checks if resumption was successful before setting the flag.
+  const tryStartAudio = async () => {
+    if (musicStarted) return; // Already successfully started
+
+    const ctx = k.audioCtx;
+    if (!ctx) return;
+
+    try {
+        // Force resume if suspended
+        if (ctx.state === "suspended") {
+            await ctx.resume();
+        }
+
+        // Only play if we are truly running now
+        if (ctx.state === "running") {
+            if (playlist.length > 0) {
+                playTrack(currentTrackIndex);
+                musicStarted = true;
+                
+                // Cleanup listeners only when we are sure it started
+                window.removeEventListener("touchstart", tryStartAudio, { capture: true });
+                window.removeEventListener("click", tryStartAudio, { capture: true });
+                window.removeEventListener("keydown", tryStartAudio, { capture: true });
+            }
+        }
+    } catch (e) {
+        console.warn("Audio resume attempt failed", e);
     }
   };
 
-  window.addEventListener("touchstart", attemptStartBGM, { capture: true });
-  window.addEventListener("click", attemptStartBGM, { capture: true });
-  window.addEventListener("keydown", attemptStartBGM, { capture: true });
+  // Attach to global window events with capture to catch them first
+  window.addEventListener("touchstart", tryStartAudio, { capture: true });
+  window.addEventListener("click", tryStartAudio, { capture: true });
+  window.addEventListener("keydown", tryStartAudio, { capture: true });
 
+  // Sync volume updates
   k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
 
   // 5b. SFX BRIDGE
   store.sub(sfxTriggerAtom, () => {
     const sfx = store.get(sfxTriggerAtom);
     if (sfx && sfx.name) {
-       if (!musicStarted) attemptStartBGM(); 
+       // Piggyback: Try to unlock audio when an SFX is requested (e.g. Memory Game click)
+       if (!musicStarted) tryStartAudio(); 
+
        try {
          k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
        } catch (e) {
@@ -187,8 +184,7 @@ export default async function initGame() {
     }
   });
 
-  // --- 6. PLAYER PAUSE LOGIC ---
-  
+  // --- 6. PLAYER PAUSE ---
   const pauseAnim = playerData.directions === 4 ? "idle" : "walk-down-idle";
 
   k.onUpdate(() => {
@@ -202,13 +198,7 @@ export default async function initGame() {
       if (isSkills || isWork || isProj || isAbout) {
         if (!player.paused) {
           player.moveTo(player.pos); 
-          
-          try {
-             player.play(pauseAnim); 
-          } catch(e) {
-             console.warn("Pause anim missing, ignoring", e);
-          }
-          
+          try { player.play(pauseAnim); } catch(e) {}
           player.paused = true; 
         }
       } else if (player.paused) {
@@ -219,16 +209,10 @@ export default async function initGame() {
 
   // --- 7. CAMERA ---
   const setInitCamZoomValue = () => {
-    if (k.width() < 1000) { 
-        k.setCamScale(k.vec2(0.5)); 
-        store.set(cameraZoomValueAtom, 0.5); 
-        return; 
-    }
-    k.setCamScale(k.vec2(0.8)); 
-    store.set(cameraZoomValueAtom, 0.8);
+    if (k.width() < 1000) { k.setCamScale(k.vec2(0.5)); store.set(cameraZoomValueAtom, 0.5); return; }
+    k.setCamScale(k.vec2(0.8)); store.set(cameraZoomValueAtom, 0.8);
   };
   setInitCamZoomValue();
-
   k.onUpdate(() => {
     const val = store.get(cameraZoomValueAtom);
     if (val !== k.getCamScale().x) k.setCamScale(k.vec2(val));
