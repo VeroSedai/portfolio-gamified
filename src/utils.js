@@ -1,3 +1,4 @@
+
 export async function makeAppear(k, gameObj) {
     await k.tween(
       gameObj.opacity,
@@ -26,3 +27,25 @@ export async function makeAppear(k, gameObj) {
       }
     });
   }
+// Helper for safe fetching
+export const safeFetch = async (relativePath) => {
+  const fullPath = resolvePath(relativePath);
+  try {
+    const response = await fetch(fullPath);
+    if (!response.ok) throw new Error(`File missing: ${fullPath}`);
+    return await response.json();
+  } catch (e) {
+    console.error(`JSON Error ${fullPath}:`, e);
+    return {};
+  }
+};
+
+// --- PATH HELPER ---
+
+export const resolvePath = (path) => {
+  const baseUrl = import.meta.env.BASE_URL;
+  const cleanPath = path.replace(/^\.?\//, "");
+  const safeBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  return `${safeBase}${cleanPath}`;
+};
+
