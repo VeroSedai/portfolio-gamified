@@ -124,7 +124,7 @@ export default async function initGame() {
     loadPromises.push(loadSoundSafe(k, trackName, `audio/${trackName}`)); 
   });
 
-  // --- WAIT FOR ASSETS ---
+  // --- WAIT FOR ALL ASSETS ---
   await Promise.all(loadPromises);
   
   // --- 5. AUDIO SYSTEM ---
@@ -149,32 +149,42 @@ export default async function initGame() {
     }
   }
 
-  // "Aggressive" Unlocker for Mobile
-  // Must run on DIRECT user interaction (click/touch), not inside a loop/timer.
-  const unlockAndPlay = () => {
-    if (musicStarted) return;
+  // --- AUDIO UNLOCKER ---
+  // This function tries to resume audio on direct user interactions ONLY.
+  // It checks if resumption was successful before setting the flag.
+  const tryStartAudio = async () => {
+    if (musicStarted) return; // Already successfully started
 
-    // 1. Force Resume Audio Context
-    if (k.audioCtx && k.audioCtx.state === "suspended") {
-        k.audioCtx.resume();
-    }
+    const ctx = k.audioCtx;
+    if (!ctx) return;
 
-    // 2. Play Music immediately
-    if (playlist.length > 0) {
-        playTrack(currentTrackIndex);
-        musicStarted = true;
+    try {
+        // Force resume if suspended
+        if (ctx.state === "suspended") {
+            await ctx.resume();
+        }
 
-        // 3. Remove listeners once successful
-        ['click', 'touchstart', 'keydown'].forEach(evt => 
-            document.removeEventListener(evt, unlockAndPlay, { capture: true })
-        );
+        // Only play if we are truly running now
+        if (ctx.state === "running") {
+            if (playlist.length > 0) {
+                playTrack(currentTrackIndex);
+                musicStarted = true;
+                
+                // Cleanup listeners only when we are sure it started
+                window.removeEventListener("touchstart", tryStartAudio, { capture: true });
+                window.removeEventListener("click", tryStartAudio, { capture: true });
+                window.removeEventListener("keydown", tryStartAudio, { capture: true });
+            }
+        }
+    } catch (e) {
+        console.warn("Audio resume attempt failed", e);
     }
   };
 
-  // Attach to document to catch ANY interaction on the page
-  ['click', 'touchstart', 'keydown'].forEach(evt => 
-    document.addEventListener(evt, unlockAndPlay, { capture: true })
-  );
+  // Attach to global window events with capture to catch them first
+  window.addEventListener("touchstart", tryStartAudio, { capture: true });
+  window.addEventListener("click", tryStartAudio, { capture: true });
+  window.addEventListener("keydown", tryStartAudio, { capture: true });
 
   // Sync volume updates
   k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
@@ -183,8 +193,8 @@ export default async function initGame() {
   store.sub(sfxTriggerAtom, () => {
     const sfx = store.get(sfxTriggerAtom);
     if (sfx && sfx.name) {
-       // Also try to unlock if SFX is triggered (e.g. Memory Game click)
-       if (!musicStarted) unlockAndPlay(); 
+       // Piggyback: Try to unlock audio when an SFX is requested (e.g. Memory Game click)
+       if (!musicStarted) tryStartAudio(); 
 
        try {
          k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
