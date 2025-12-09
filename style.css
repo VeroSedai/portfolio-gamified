@@ -96,31 +96,6 @@ body, html {
   font-size: 0.8rem;
 }
 
-/* Music Control Panel */
-.music-control {
-  position: fixed;
-  bottom: 2vh;      
-  right: 2vw;  
-  z-index: 5;       
-  padding: 10px;  
-  background: var(--color4); /* Uses semi-transparent var */
-  border: 1px solid var(--color2);
-  border-radius: 8px;
-  color: var(--color2);
-  backdrop-filter: blur(4px);
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 0.8rem;
-  font-family: "ibm-bold";
-}
-
-.music-control:hover {
-  box-shadow: 0 0 10px var(--color2);
-}
-
 /* 5. GENERIC MODAL SYSTEM */
 .modal {
   position: fixed;
@@ -609,27 +584,6 @@ body, html {
     font-size: 1.2rem;
   }
 
-  /* 2. TOP LEFT: Music Controls (Moved here to clear bottom area) */
-  .music-control {
-    position: fixed;
-    top: 15px;
-    left: 15px;
-    right: auto;
-    bottom: auto;
-    width: auto;
-    padding: 8px 12px;
-    flex-direction: row; /* Horizontal layout on mobile */
-    align-items: center;
-    gap: 12px;
-    border-radius: 20px; /* Pill shape */
-    font-size: 0.7rem;
-  }
-
-  /* Hide labels on mobile to save space, rely on icons if possible, or keep simple */
-  .music-control span {
-    display: none; /* Hide text labels "Music", "SFX" if present in HTML structure */
-  }
-
   /* 3. BOTTOM CENTER: Tutorial Messages (Out of the way) */
   .controls-message {
     top: auto;
@@ -718,7 +672,7 @@ body, html {
 
 .info-card {
   background: rgba(255,255,255,0.03);
-  border-left: 3px solid var(--color2); /* Stile "Log Entry" */
+  border-left: 3px solid var(--color2);
   padding: 10px;
   border-radius: 0 4px 4px 0;
   display: flex;
@@ -726,7 +680,7 @@ body, html {
 }
 
 .cert-card {
-  border-left-color: #f9f871; /* Giallo per le certificazioni (Achievement) */
+  border-left-color: #f9f871;
 }
 
 .info-title {
@@ -762,5 +716,130 @@ body, html {
     border-bottom: 1px solid var(--color2);
     padding-bottom: 20px;
     margin-bottom: 10px;
+  }
+}
+
+.settings-widget {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 100; /* Sopra al gioco */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Bottone Ingranaggio */
+.settings-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid var(--color2);
+  color: var(--color2);
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+.settings-btn:hover {
+  background: var(--color2);
+  color: var(--color1);
+  transform: rotate(90deg);
+}
+
+.settings-btn.active {
+  background: var(--color2);
+  color: var(--color1);
+  transform: rotate(180deg);
+}
+
+.settings-panel {
+  background: rgba(11, 12, 21, 0.9);
+  border: 2px solid var(--color2);
+  border-radius: 12px;
+  padding: 15px;
+  width: 200px;
+  opacity: 0;
+  transform: translateY(-20px) scale(0.9);
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-origin: top left;
+}
+
+.settings-panel.expanded {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Righe Volume */
+.volume-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.volume-row:last-child {
+  margin-bottom: 0;
+}
+
+.vol-icon {
+  font-size: 1.2rem;
+}
+
+/* Custom Range Slider (Stile Cyberpunk) */
+.cyber-range {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #333;
+  border-radius: 3px;
+  outline: none;
+}
+
+.cyber-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color2);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--color2);
+  border: 2px solid var(--color3);
+}
+
+.cyber-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color2);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--color2);
+  border: 2px solid var(--color3);
+}
+
+@media (max-width: 600px) {
+  .settings-widget {
+    top: 15px;
+    left: 15px;
+  }
+  
+  .settings-btn {
+    width: 45px;
+    height: 45px;
+    font-size: 1.2rem;
+  }
+  
+  .music-control {
+    display: none !important; 
   }
 }
