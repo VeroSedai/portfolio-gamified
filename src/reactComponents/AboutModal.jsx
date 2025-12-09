@@ -35,7 +35,7 @@ export default function AboutModal() {
           {/* LEFT COLUMN: AVATAR & STATS */}
           <div className="about-left">
             <div className="avatar-frame">
-                <img src="./icon.svg" alt="Avatar" className="pixel-avatar" />
+                <img src={`${import.meta.env.BASE_URL}/icon.svg`}  alt="Avatar" className="pixel-avatar" /> 
             </div>
             
             <div className="stats-box">
@@ -69,7 +69,7 @@ export default function AboutModal() {
                   title={social.name}
                 >
                   <img 
-                    src={`./logos/${social.logoData.name}.png`} 
+                    src={`${import.meta.env.BASE_URL}/logos/${social.logoData.name}.png`} 
                     alt={social.name} 
                     className="social-icon-img"
                   />
