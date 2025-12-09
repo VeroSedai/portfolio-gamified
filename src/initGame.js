@@ -85,7 +85,7 @@ export default async function initGame() {
   if (Array.isArray(projectsData)) projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `projects/${p.thumbnail}.png`));
 
   // Load Player Sprite
-  const spriteName = playerData.sprite || "player_cyborg";
+  const spriteName = playerData.sprite || "player";
   loadPromises.push(k.loadSprite("player", resolvePath(`sprites/${spriteName}.png`), {
     sliceX: playerData.sliceX || 4,
     sliceY: playerData.sliceY || 8,
@@ -124,7 +124,7 @@ export default async function initGame() {
     loadPromises.push(loadSoundSafe(k, trackName, `audio/${trackName}`)); 
   });
 
-  // --- WAIT FOR ALL ASSETS ---
+  // --- WAIT FOR ASSETS ---
   await Promise.all(loadPromises);
   
   // --- 5. AUDIO SYSTEM ---
@@ -145,40 +145,47 @@ export default async function initGame() {
             playTrack(currentTrackIndex);
         });
     } catch (e) {
-        console.warn(`[BGM Error] Failed to play track: ${trackName}`, e);
-        if (playlist.length > 1) {
-            currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
-            setTimeout(() => playTrack(currentTrackIndex), 100); 
-        }
+        console.warn(`[BGM Error]`, e);
     }
   }
 
-  const attemptStartBGM = () => {
-    if (musicStarted) return; 
+  // "Aggressive" Unlocker for Mobile
+  // Must run on DIRECT user interaction (click/touch), not inside a loop/timer.
+  const unlockAndPlay = () => {
+    if (musicStarted) return;
+
+    // 1. Force Resume Audio Context
     if (k.audioCtx && k.audioCtx.state === "suspended") {
-        k.audioCtx.resume().catch(e => console.warn("Audio resume failed", e));
+        k.audioCtx.resume();
     }
+
+    // 2. Play Music immediately
     if (playlist.length > 0) {
         playTrack(currentTrackIndex);
         musicStarted = true;
-        // Clean up listeners
-        window.removeEventListener("touchstart", attemptStartBGM);
-        window.removeEventListener("click", attemptStartBGM);
-        window.removeEventListener("keydown", attemptStartBGM);
+
+        // 3. Remove listeners once successful
+        ['click', 'touchstart', 'keydown'].forEach(evt => 
+            document.removeEventListener(evt, unlockAndPlay, { capture: true })
+        );
     }
   };
 
-  window.addEventListener("touchstart", attemptStartBGM, { capture: true });
-  window.addEventListener("click", attemptStartBGM, { capture: true });
-  window.addEventListener("keydown", attemptStartBGM, { capture: true });
+  // Attach to document to catch ANY interaction on the page
+  ['click', 'touchstart', 'keydown'].forEach(evt => 
+    document.addEventListener(evt, unlockAndPlay, { capture: true })
+  );
 
+  // Sync volume updates
   k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
 
   // 5b. SFX BRIDGE
   store.sub(sfxTriggerAtom, () => {
     const sfx = store.get(sfxTriggerAtom);
     if (sfx && sfx.name) {
-       if (!musicStarted) attemptStartBGM(); 
+       // Also try to unlock if SFX is triggered (e.g. Memory Game click)
+       if (!musicStarted) unlockAndPlay(); 
+
        try {
          k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
        } catch (e) {
@@ -187,8 +194,7 @@ export default async function initGame() {
     }
   });
 
-  // --- 6. PLAYER PAUSE LOGIC ---
-  
+  // --- 6. PLAYER PAUSE ---
   const pauseAnim = playerData.directions === 4 ? "idle" : "walk-down-idle";
 
   k.onUpdate(() => {
@@ -202,13 +208,7 @@ export default async function initGame() {
       if (isSkills || isWork || isProj || isAbout) {
         if (!player.paused) {
           player.moveTo(player.pos); 
-          
-          try {
-             player.play(pauseAnim); 
-          } catch(e) {
-             console.warn("Pause anim missing, ignoring", e);
-          }
-          
+          try { player.play(pauseAnim); } catch(e) {}
           player.paused = true; 
         }
       } else if (player.paused) {
@@ -219,16 +219,10 @@ export default async function initGame() {
 
   // --- 7. CAMERA ---
   const setInitCamZoomValue = () => {
-    if (k.width() < 1000) { 
-        k.setCamScale(k.vec2(0.5)); 
-        store.set(cameraZoomValueAtom, 0.5); 
-        return; 
-    }
-    k.setCamScale(k.vec2(0.8)); 
-    store.set(cameraZoomValueAtom, 0.8);
+    if (k.width() < 1000) { k.setCamScale(k.vec2(0.5)); store.set(cameraZoomValueAtom, 0.5); return; }
+    k.setCamScale(k.vec2(0.8)); store.set(cameraZoomValueAtom, 0.8);
   };
   setInitCamZoomValue();
-
   k.onUpdate(() => {
     const val = store.get(cameraZoomValueAtom);
     if (val !== k.getCamScale().x) k.setCamScale(k.vec2(val));
