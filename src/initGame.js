@@ -21,12 +21,16 @@ import {
 } from "./store";
 
 // --- PATH HELPER FOR PRODUCTION BUILD ---
-const BASE_URL = import.meta.env.BASE_URL;
-
+// Fixes the missing slash issue (e.g. /portfolio-gamifiedconfigs -> /portfolio-gamified/configs)
 const resolvePath = (path) => {
-  // Remove leading ./ or / to clean the path
+  const baseUrl = import.meta.env.BASE_URL;
+  // Remove leading ./ or / from the target path to avoid double slashes
   const cleanPath = path.replace(/^\.?\//, "");
-  return `${BASE_URL}${cleanPath}`;
+  
+  // Ensure base url ends with /
+  const safeBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  
+  return `${safeBase}${cleanPath}`;
 };
 
 // Helper for safe fetching
@@ -96,9 +100,10 @@ export default async function initGame() {
   }));
 
   // Load Fonts & Shader
-  k.loadFont("ibm-regular", resolvePath("fonts/IBMPlexSans-Regular.ttf"));
-  k.loadFont("ibm-bold", resolvePath("fonts/IBMPlexSans-Bold.ttf"));
-  k.loadShaderURL("tiledPattern", null, resolvePath("shaders/tiledPattern.frag"));
+  loadPromises.push(k.loadFont("ibm-regular", resolvePath("fonts/IBMPlexSans-Regular.ttf")));
+  loadPromises.push(k.loadFont("ibm-bold", resolvePath("fonts/IBMPlexSans-Bold.ttf")));
+  // Shader loading (must use loadShaderURL correctly)
+  loadPromises.push(k.loadShaderURL("tiledPattern", null, resolvePath("shaders/tiledPattern.frag")));
   
   // --- AUDIO LOADING ---
   
