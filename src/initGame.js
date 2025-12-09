@@ -21,15 +21,10 @@ import {
 } from "./store";
 
 // --- PATH HELPER FOR PRODUCTION BUILD ---
-// Fixes the missing slash issue (e.g. /portfolio-gamifiedconfigs -> /portfolio-gamified/configs)
 const resolvePath = (path) => {
   const baseUrl = import.meta.env.BASE_URL;
-  // Remove leading ./ or / from the target path to avoid double slashes
   const cleanPath = path.replace(/^\.?\//, "");
-  
-  // Ensure base url ends with /
   const safeBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  
   return `${safeBase}${cleanPath}`;
 };
 
@@ -42,7 +37,7 @@ const safeFetch = async (relativePath) => {
     return await response.json();
   } catch (e) {
     console.error(`JSON Error ${fullPath}:`, e);
-    return {}; // Return empty object to prevent crash
+    return {}; 
   }
 };
 
@@ -60,7 +55,6 @@ export default async function initGame() {
 
   // --- 2. THEME SETUP ---
   const root = document.documentElement;
-  // Default fallbacks if theme colors are missing
   root.style.setProperty("--color1", theme.colors?.background || "#0b0c15"); 
   root.style.setProperty("--color2", theme.colors?.primary || "#2de2e6");    
   root.style.setProperty("--color3", theme.colors?.text || "#ffffff");       
@@ -81,7 +75,6 @@ export default async function initGame() {
   
   const loadAsset = (name, relativePath) => {
     if (!name || loadedAssets.has(name)) return;
-    // Fix path using base url
     loadPromises.push(k.loadSprite(name, resolvePath(relativePath)));
     loadedAssets.add(name);
   };
@@ -102,11 +95,9 @@ export default async function initGame() {
   // Load Fonts & Shader
   loadPromises.push(k.loadFont("ibm-regular", resolvePath("fonts/IBMPlexSans-Regular.ttf")));
   loadPromises.push(k.loadFont("ibm-bold", resolvePath("fonts/IBMPlexSans-Bold.ttf")));
-  // Shader loading (must use loadShaderURL correctly)
   loadPromises.push(k.loadShaderURL("tiledPattern", null, resolvePath("shaders/tiledPattern.frag")));
   
   // --- AUDIO LOADING ---
-  
   const loadSoundSafe = (k, id, relativePath) => {
     const fullPath = resolvePath(relativePath);
     return new Promise((resolve) => {
@@ -139,14 +130,12 @@ export default async function initGame() {
   // --- 5. AUDIO SYSTEM ---
   let currentTrackIndex = 0;
   let bgm = null;
-  let musicStarted = false; // Flag to track if music has successfully started
 
   function playTrack(index) {
     if (bgm) bgm.stop();
     const trackName = playlist[index];
     
     try {
-        console.log(`[BGM] Attempting to play: ${trackName}`);
         bgm = k.play(trackName, { 
             loop: false, 
             volume: store.get(musicVolumeAtom) 
@@ -156,54 +145,69 @@ export default async function initGame() {
             currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
             playTrack(currentTrackIndex);
         });
-        
-        return true; // Success
     } catch (e) {
         console.warn(`[BGM Error] Failed to play track: ${trackName}`, e);
-        // Try next track if this one fails
+        // Try next track
         if (playlist.length > 1) {
             currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
             setTimeout(() => playTrack(currentTrackIndex), 100); 
         }
-        return false; // Failed
     }
   }
 
-  // GLOBAL AUDIO UNLOCKER
-  // Attaches to window events to ensure we catch the very first interaction
-  const attemptStartBGM = () => {
-    if (musicStarted) return; // Already running
-
-    // Resume context if suspended (Mobile browser requirement)
-    if (k.audioCtx && k.audioCtx.state === "suspended") {
-        k.audioCtx.resume().catch(e => console.warn("Audio resume failed", e));
-    }
+  // --- AUDIO UNLOCKER ---
+  // This function tries to resume the AudioContext on EVERY interaction
+  // until it confirms the state is 'running'.
+  const unlockAudioContext = () => {
+    const ctx = k.audioCtx;
     
-    if (playlist.length > 0) {
-        const success = playTrack(currentTrackIndex);
-        if (success) {
-            musicStarted = true;
-            // Clean up listeners once music starts
-            window.removeEventListener("touchstart", attemptStartBGM);
-            window.removeEventListener("click", attemptStartBGM);
-            window.removeEventListener("keydown", attemptStartBGM);
+    // If context exists and is suspended, try to resume
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().then(() => {
+        // Once resumed, if music isn't playing yet, start it!
+        if (!bgm && playlist.length > 0) {
+           playTrack(currentTrackIndex);
         }
+      }).catch(e => console.warn("Audio resume failed", e));
+    } 
+    // If context is running but music isn't playing (e.g. first start failed)
+    else if (ctx && ctx.state === 'running' && !bgm && playlist.length > 0) {
+       playTrack(currentTrackIndex);
     }
   };
 
-  // Add listeners to global window for maximum compatibility
-  window.addEventListener("touchstart", attemptStartBGM, { capture: true });
-  window.addEventListener("click", attemptStartBGM, { capture: true });
-  window.addEventListener("keydown", attemptStartBGM, { capture: true });
+  // Attach to multiple events to catch the first valid user gesture
+  // using { capture: true } to intercept events before React stops them
+  ['click', 'touchstart', 'touchend', 'keydown', 'mousedown'].forEach(event => {
+    document.addEventListener(event, unlockAudioContext, { capture: true });
+  });
 
-  // Sync volume updates
-  k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
+  // Keep checking in the game loop as a fallback
+  k.onUpdate(() => {
+    if (bgm) {
+        bgm.volume = store.get(musicVolumeAtom);
+        
+        // If we have a BGM object but AudioContext got suspended again (rare but possible)
+        if (k.audioCtx && k.audioCtx.state === 'suspended') {
+            // Remove listeners if we are done? No, keep them just in case.
+        } else {
+            // Audio is running fine, we could remove listeners here to save perf,
+            // but keeping them is safer for "tab switching" scenarios.
+        }
+    } else {
+        // If no BGM yet, check if there is interaction
+        if (k.isMouseDown() || k.isKeyPressed()) {
+            unlockAudioContext();
+        }
+    }
+  });
 
   // 5b. SFX BRIDGE
   store.sub(sfxTriggerAtom, () => {
     const sfx = store.get(sfxTriggerAtom);
     if (sfx && sfx.name) {
-       if (!musicStarted) attemptStartBGM(); // Piggyback BGM start on SFX
+       // Piggyback: Try to unlock audio when an SFX is requested
+       unlockAudioContext();
 
        try {
          k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
@@ -255,7 +259,6 @@ export default async function initGame() {
     ]);
     bg.onUpdate(() => { bg.width = k.width(); bg.height = k.height(); });
   } else {
-    // FIX: Ensure shader path is resolved (done above in loadShaderURL), asset name is just ID
     const sp = bgConfig.shaderParams || {};
     const bg = k.add([
       k.uvquad(k.width(), k.height()),
