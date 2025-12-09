@@ -4,6 +4,7 @@ import ReactUI from "./ReactUI";
 import { Provider } from "jotai";
 import { store } from "./store";
 import initGame from "./initGame";
+import '/style.scss';
 
 const ui = document.getElementById("ui");
 const root = createRoot(ui);

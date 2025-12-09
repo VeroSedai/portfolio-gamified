@@ -31,11 +31,10 @@ export default function SkillsModal() {
   // --- AUDIO HELPER ---
   const playAudio = (key) => {
     try {
-      // 1. Search in loaded theme
-      // 2. If not found, smart fallback on key name (e.g. "flip.mp3")
       const filename = theme?.audio?.sfx?.[key] || `${key}.mp3`;
-      
-      const audio = new Audio(`./audio/${filename}`);
+      // Use BASE_URL for audio path too
+      const audioPath = `${import.meta.env.BASE_URL}audio/${filename}`;
+      const audio = new Audio(audioPath);
       audio.volume = sfxVolume; 
       audio.play().catch(e => console.warn("Audio play blocked", e));
     } catch (e) {
@@ -67,7 +66,7 @@ export default function SkillsModal() {
       return;
     }
 
-    playAudio("flip"); // Reads from JSON
+    playAudio("flip"); 
 
     const newFlipped = [...flippedIndices, index];
     setFlippedIndices(newFlipped);
@@ -101,23 +100,36 @@ export default function SkillsModal() {
   return (
     <div className="modal">
       <div className="modal-content skills-modal">
-        {/* Header */}
-        <div className="skills-header">
-            <h1>Solve the memory game to discover my skills</h1>
-            <button 
-                className="close-btn" 
-                onClick={() => setIsVisible(false)}
-            >X</button>
+        <div className="modal-header">
+          <div style={{ textAlign: "left" }}>
+            <h1 style={{ fontFamily: "ibm-bold", margin: 0, fontSize: "1.5rem" }}>
+              SYSTEM_ACCESS: SKILLS
+            </h1>
+            <p style={{ 
+              fontFamily: "ibm-regular", 
+              fontSize: "0.9rem", 
+              color: "#aaa", 
+              marginTop: "5px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}>
+              <span style={{ color: "var(--color2)" }}>&gt;</span> 
+              MISSION: MATCH PAIRS TO DECRYPT DATA...
+            </p>
+          </div>
+
+          <button 
+              className="close-btn" 
+              onClick={() => setIsVisible(false)}
+          >X</button>
         </div>
 
-        {/* Game Grid */}
         <div className="memory-grid">
           {cards.map((card, index) => {
             const isFlipped = flippedIndices.includes(index);
             const isMatched = matchedNames.includes(card.name);
-            
-            // Build image path
-            const imgSrc = `./logos/${card.logoData.name}.png`; 
+            const imgSrc = `${import.meta.env.BASE_URL}/logos/${card.logoData.name}.png`; 
 
             return (
               <div
@@ -126,11 +138,9 @@ export default function SkillsModal() {
                 onClick={() => handleCardClick(index)}
               >
                 <div className="card-inner">
-                  {/* FRONT (Cover) */}
                   <div className="card-front">
                     <span>{"</>"}</span>
                   </div>
-                  {/* BACK (Skill Image) */}
                   <div className="card-back">
                     <img src={imgSrc} alt={card.name} />
                   </div>
