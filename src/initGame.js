@@ -20,33 +20,41 @@ import {
   themeAtom
 } from "./store";
 
+// --- PATH HELPER FOR VITE PRODUCTION BUILD ---
+const resolvePath = (path) => {
+  const baseUrl = import.meta.env.BASE_URL;
+  const cleanPath = path.replace(/^\.?\//, "");
+  const safeBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  return `${safeBase}${cleanPath}`;
+};
+
 // Helper for safe fetching
-const safeFetch = async (path) => {
+const safeFetch = async (relativePath) => {
+  const fullPath = resolvePath(relativePath);
   try {
-    const response = await fetch(path);
-    if (!response.ok) throw new Error(`File missing: ${path}`);
+    const response = await fetch(fullPath);
+    if (!response.ok) throw new Error(`File missing: ${fullPath}`);
     return await response.json();
   } catch (e) {
-    console.error(`JSON Error ${path}:`, e);
-    return {}; // Return empty object to prevent crash
+    console.error(`JSON Error ${fullPath}:`, e);
+    return {}; 
   }
 };
 
 export default async function initGame() {
   // --- 1. DATA LOADING ---
-  const theme = await safeFetch("./configs/theme.json");
-  const aboutData = await safeFetch("./configs/aboutData.json"); 
-  const layoutData = await safeFetch("./configs/layoutData.json"); 
-  const playerData = await safeFetch("./configs/playerData.json"); 
+  const theme = await safeFetch("configs/theme.json");
+  const aboutData = await safeFetch("configs/aboutData.json");
+  const layoutData = await safeFetch("configs/layoutData.json"); 
+  const playerData = await safeFetch("configs/playerData.json"); 
   
-  const skillsData = await safeFetch("./configs/skillsData.json");
-  const socialsData = await safeFetch("./configs/socialsData.json");
-  const experiencesData = await safeFetch("./configs/experiencesData.json");
-  const projectsData = await safeFetch("./configs/projectsData.json");
+  const skillsData = await safeFetch("configs/skillsData.json");
+  const socialsData = await safeFetch("configs/socialsData.json");
+  const experiencesData = await safeFetch("configs/experiencesData.json");
+  const projectsData = await safeFetch("configs/projectsData.json");
 
   // --- 2. THEME SETUP ---
   const root = document.documentElement;
-  // Default fallbacks if theme colors are missing
   root.style.setProperty("--color1", theme.colors?.background || "#0b0c15"); 
   root.style.setProperty("--color2", theme.colors?.primary || "#2de2e6");    
   root.style.setProperty("--color3", theme.colors?.text || "#ffffff");       
@@ -55,81 +63,79 @@ export default async function initGame() {
   store.set(skillsDataAtom, skillsData);
   store.set(workExperienceDataAtom, experiencesData);
   store.set(projectsDataAtom, projectsData);
-  store.set(aboutDataAtom, aboutData); // <--- Store variable updated
+  store.set(aboutDataAtom, aboutData); 
   store.set(socialsDataAtom, socialsData); 
   store.set(themeAtom, theme); 
 
   const k = makeKaplayCtx();
 
   // --- 4. DYNAMIC ASSET LOADING ---
+  const loadPromises = []; 
   const loadedAssets = new Set(); 
-  const loadAsset = (name, path) => {
+  
+  const loadAsset = (name, relativePath) => {
     if (!name || loadedAssets.has(name)) return;
-    k.loadSprite(name, path);
+    loadPromises.push(k.loadSprite(name, resolvePath(relativePath)));
     loadedAssets.add(name);
   };
 
-  // Load Sprites
-  if (Array.isArray(skillsData)) skillsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `./logos/${s.logoData.name}.png`));
-  if (Array.isArray(socialsData)) socialsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `./logos/${s.logoData.name}.png`));
-  if (Array.isArray(projectsData)) projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `./projects/${p.thumbnail}.png`));
+  // Sprite Loading
+  if (Array.isArray(skillsData)) skillsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `logos/${s.logoData.name}.png`));
+  if (Array.isArray(socialsData)) socialsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `logos/${s.logoData.name}.png`));
+  if (Array.isArray(projectsData)) projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `projects/${p.thumbnail}.png`));
 
   // Load Player Sprite
   const spriteName = playerData.sprite || "player";
-  k.loadSprite("player", `./sprites/${spriteName}.png`, {
+  loadPromises.push(k.loadSprite("player", resolvePath(`sprites/${spriteName}.png`), {
     sliceX: playerData.sliceX || 4,
     sliceY: playerData.sliceY || 8,
     anims: playerData.anims || { "walk-down-idle": 0 },
-  });
+  }));
 
   // Load Fonts & Shader
-  k.loadFont("ibm-regular", "./fonts/IBMPlexSans-Regular.ttf");
-  k.loadFont("ibm-bold", "./fonts/IBMPlexSans-Bold.ttf");
-  k.loadShaderURL("tiledPattern", null, "./shaders/tiledPattern.frag");
+  loadPromises.push(k.loadFont("ibm-regular", resolvePath("fonts/IBMPlexSans-Regular.ttf")));
+  loadPromises.push(k.loadFont("ibm-bold", resolvePath("fonts/IBMPlexSans-Bold.ttf")));
+  loadPromises.push(k.loadShaderURL("tiledPattern", null, resolvePath("shaders/tiledPattern.frag")));
   
-  // --- AUDIO LOADING (FIXED PATHS) ---
-  // We use absolute paths /audio/ to avoid issues with relative resolution
-  
-  // 1. SFX (Defaults + Dynamic)
-  k.loadSound("flip", "/audio/flip.mp3");
-  k.loadSound("match", "/audio/match.mp3");
+  // --- AUDIO LOADING ---
+  const loadSoundSafe = (k, id, relativePath) => {
+    const fullPath = resolvePath(relativePath);
+    return new Promise((resolve) => {
+        k.loadSound(id, fullPath).then(resolve).catch(e => {
+            console.warn(`[Audio Skipped] ID: ${id}, Path: ${fullPath}`, e);
+            resolve(); 
+        });
+    });
+  };
+
+  // 1. SFX
+  loadPromises.push(loadSoundSafe(k, "flip", "audio/flip.mp3"));
+  loadPromises.push(loadSoundSafe(k, "match", "audio/match.mp3"));
   
   if (theme.audio && theme.audio.sfx) {
     for (const [key, filename] of Object.entries(theme.audio.sfx)) {
-      k.loadSound(key, `/audio/${filename}`);
+      loadPromises.push(loadSoundSafe(k, key, `audio/${filename}`));
     }
   }
 
   // 2. Playlist (BGM)
-  const playlist = theme.audio?.playlist || ["background-music.mp3"]; // Fallback default
+  const playlist = theme.audio?.playlist || ["background-music.mp3"]; 
   playlist.forEach((trackName) => {
-    k.loadSound(trackName, `/audio/${trackName}`);
+    loadPromises.push(loadSoundSafe(k, trackName, `audio/${trackName}`)); 
   });
 
+  // --- WAIT FOR ALL ASSETS ---
+  await Promise.all(loadPromises);
+  
   // --- 5. AUDIO SYSTEM ---
   let currentTrackIndex = 0;
   let bgm = null;
   let musicStarted = false;
 
-  function startBGM() {
-    if (musicStarted) return;
-    
-    // Attempt to unlock Audio Context
-    if (k.audioCtx && k.audioCtx.state === "suspended") {
-        k.audioCtx.resume();
-    }
-    
-    if (playlist.length > 0) {
-        playTrack(currentTrackIndex);
-        musicStarted = true;
-    }
-  }
-
   function playTrack(index) {
     if (bgm) bgm.stop();
     const trackName = playlist[index];
     
-    // Check if sound loaded successfully before playing to avoid errors
     try {
         bgm = k.play(trackName, { 
             loop: false, 
@@ -141,21 +147,46 @@ export default async function initGame() {
             playTrack(currentTrackIndex);
         });
     } catch (e) {
-        console.warn("Could not play track:", trackName, e);
+        console.warn(`[BGM Error] Failed to play track: ${trackName}`, e);
+        if (playlist.length > 1) {
+            currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+            setTimeout(() => playTrack(currentTrackIndex), 100); 
+        }
     }
   }
 
-  // Inputs to start audio
-  k.onKeyPress(startBGM);
-  k.onMousePress(startBGM);
-  k.onTouchStart(startBGM); 
-  k.onTouchEnd(startBGM);   
+  // GLOBAL AUDIO UNLOCKER
+  const attemptStartBGM = () => {
+    if (musicStarted) return; 
+
+    if (k.audioCtx && k.audioCtx.state === "suspended") {
+        k.audioCtx.resume().catch(e => console.warn("Audio resume failed", e));
+    }
+    
+    if (playlist.length > 0) {
+        // Try starting the first track
+        playTrack(currentTrackIndex);
+        musicStarted = true;
+        
+        // Clean up
+        window.removeEventListener("touchstart", attemptStartBGM);
+        window.removeEventListener("click", attemptStartBGM);
+        window.removeEventListener("keydown", attemptStartBGM);
+    }
+  };
+
+  window.addEventListener("touchstart", attemptStartBGM, { capture: true });
+  window.addEventListener("click", attemptStartBGM, { capture: true });
+  window.addEventListener("keydown", attemptStartBGM, { capture: true });
+
   k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
 
-  // --- 5b. SFX BRIDGE (React -> Kaplay) ---
+  // 5b. SFX BRIDGE
   store.sub(sfxTriggerAtom, () => {
     const sfx = store.get(sfxTriggerAtom);
     if (sfx && sfx.name) {
+       if (!musicStarted) attemptStartBGM(); 
+
        try {
          k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
        } catch (e) {
@@ -185,17 +216,25 @@ export default async function initGame() {
     }
   });
 
+  // FIX: Updated deprecated camScale to getCamScale / setCamScale
   const setInitCamZoomValue = () => {
-    if (k.width() < 1000) { k.camScale(k.vec2(0.5)); store.set(cameraZoomValueAtom, 0.5); return; }
-    k.camScale(k.vec2(0.8)); store.set(cameraZoomValueAtom, 0.8);
+    if (k.width() < 1000) { 
+        k.setCamScale(k.vec2(0.5)); 
+        store.set(cameraZoomValueAtom, 0.5); 
+        return; 
+    }
+    k.setCamScale(k.vec2(0.8)); 
+    store.set(cameraZoomValueAtom, 0.8);
   };
   setInitCamZoomValue();
+  
   k.onUpdate(() => {
     const val = store.get(cameraZoomValueAtom);
-    if (val !== k.camScale().x) k.camScale(k.vec2(val));
+    // Use getCamScale() to read current value
+    if (val !== k.getCamScale().x) k.setCamScale(k.vec2(val));
   });
 
-  // --- 8. BACKGROUND SHADER ---
+  // --- 8. DYNAMIC BACKGROUND RENDER ---
   const bgConfig = theme.background || { type: "shader", asset: "tiledPattern" };
   
   if (bgConfig.type === "image") {
