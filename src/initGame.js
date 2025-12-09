@@ -20,7 +20,7 @@ import {
   themeAtom
 } from "./store";
 
-// --- PATH HELPER FOR PRODUCTION BUILD ---
+// --- PATH HELPER FOR VITE PRODUCTION BUILD ---
 const resolvePath = (path) => {
   const baseUrl = import.meta.env.BASE_URL;
   const cleanPath = path.replace(/^\.?\//, "");
@@ -130,6 +130,7 @@ export default async function initGame() {
   // --- 5. AUDIO SYSTEM ---
   let currentTrackIndex = 0;
   let bgm = null;
+  let musicStarted = false;
 
   function playTrack(index) {
     if (bgm) bgm.stop();
@@ -147,7 +148,6 @@ export default async function initGame() {
         });
     } catch (e) {
         console.warn(`[BGM Error] Failed to play track: ${trackName}`, e);
-        // Try next track
         if (playlist.length > 1) {
             currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
             setTimeout(() => playTrack(currentTrackIndex), 100); 
@@ -155,59 +155,37 @@ export default async function initGame() {
     }
   }
 
-  // --- AUDIO UNLOCKER ---
-  // This function tries to resume the AudioContext on EVERY interaction
-  // until it confirms the state is 'running'.
-  const unlockAudioContext = () => {
-    const ctx = k.audioCtx;
+  // GLOBAL AUDIO UNLOCKER
+  const attemptStartBGM = () => {
+    if (musicStarted) return; 
+
+    if (k.audioCtx && k.audioCtx.state === "suspended") {
+        k.audioCtx.resume().catch(e => console.warn("Audio resume failed", e));
+    }
     
-    // If context exists and is suspended, try to resume
-    if (ctx && ctx.state === 'suspended') {
-      ctx.resume().then(() => {
-        // Once resumed, if music isn't playing yet, start it!
-        if (!bgm && playlist.length > 0) {
-           playTrack(currentTrackIndex);
-        }
-      }).catch(e => console.warn("Audio resume failed", e));
-    } 
-    // If context is running but music isn't playing (e.g. first start failed)
-    else if (ctx && ctx.state === 'running' && !bgm && playlist.length > 0) {
-       playTrack(currentTrackIndex);
+    if (playlist.length > 0) {
+        // Try starting the first track
+        playTrack(currentTrackIndex);
+        musicStarted = true;
+        
+        // Clean up
+        window.removeEventListener("touchstart", attemptStartBGM);
+        window.removeEventListener("click", attemptStartBGM);
+        window.removeEventListener("keydown", attemptStartBGM);
     }
   };
 
-  // Attach to multiple events to catch the first valid user gesture
-  // using { capture: true } to intercept events before React stops them
-  ['click', 'touchstart', 'touchend', 'keydown', 'mousedown'].forEach(event => {
-    document.addEventListener(event, unlockAudioContext, { capture: true });
-  });
+  window.addEventListener("touchstart", attemptStartBGM, { capture: true });
+  window.addEventListener("click", attemptStartBGM, { capture: true });
+  window.addEventListener("keydown", attemptStartBGM, { capture: true });
 
-  // Keep checking in the game loop as a fallback
-  k.onUpdate(() => {
-    if (bgm) {
-        bgm.volume = store.get(musicVolumeAtom);
-        
-        // If we have a BGM object but AudioContext got suspended again (rare but possible)
-        if (k.audioCtx && k.audioCtx.state === 'suspended') {
-            // Remove listeners if we are done? No, keep them just in case.
-        } else {
-            // Audio is running fine, we could remove listeners here to save perf,
-            // but keeping them is safer for "tab switching" scenarios.
-        }
-    } else {
-        // If no BGM yet, check if there is interaction
-        if (k.isMouseDown() || k.isKeyPressed()) {
-            unlockAudioContext();
-        }
-    }
-  });
+  k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
 
   // 5b. SFX BRIDGE
   store.sub(sfxTriggerAtom, () => {
     const sfx = store.get(sfxTriggerAtom);
     if (sfx && sfx.name) {
-       // Piggyback: Try to unlock audio when an SFX is requested
-       unlockAudioContext();
+       if (!musicStarted) attemptStartBGM(); 
 
        try {
          k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
@@ -238,21 +216,28 @@ export default async function initGame() {
     }
   });
 
+  // FIX: Updated deprecated camScale to getCamScale / setCamScale
   const setInitCamZoomValue = () => {
-    if (k.width() < 1000) { k.camScale(k.vec2(0.5)); store.set(cameraZoomValueAtom, 0.5); return; }
-    k.camScale(k.vec2(0.8)); store.set(cameraZoomValueAtom, 0.8);
+    if (k.width() < 1000) { 
+        k.setCamScale(k.vec2(0.5)); 
+        store.set(cameraZoomValueAtom, 0.5); 
+        return; 
+    }
+    k.setCamScale(k.vec2(0.8)); 
+    store.set(cameraZoomValueAtom, 0.8);
   };
   setInitCamZoomValue();
+  
   k.onUpdate(() => {
     const val = store.get(cameraZoomValueAtom);
-    if (val !== k.camScale().x) k.camScale(k.vec2(val));
+    // Use getCamScale() to read current value
+    if (val !== k.getCamScale().x) k.setCamScale(k.vec2(val));
   });
 
   // --- 8. DYNAMIC BACKGROUND RENDER ---
   const bgConfig = theme.background || { type: "shader", asset: "tiledPattern" };
   
   if (bgConfig.type === "image") {
-    // FIX: Add base URL to sprite load
     const bg = k.add([
         k.sprite(bgConfig.asset, { tiled: true, width: k.width(), height: k.height() }),
         k.pos(0, 0), k.fixed(), k.z(-100) 

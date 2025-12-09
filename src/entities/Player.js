@@ -43,12 +43,13 @@ export default function makePlayer(k, posVec2, speed) {
   });
 
   player.onUpdate(() => {
-    if (!k.camPos().eq(player.pos)) {
+    // FIX: Updated deprecated camPos to getCamPos / setCamPos
+    if (!k.getCamPos().eq(player.pos)) {
       k.tween(
-        k.camPos(),
+        k.getCamPos(),
         player.pos,
         0.2,
-        (newPos) => k.camPos(newPos),
+        (newPos) => k.setCamPos(newPos),
         k.easings.linear
       );
     }
