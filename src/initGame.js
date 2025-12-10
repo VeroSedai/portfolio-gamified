@@ -1,37 +1,28 @@
 import makeKaplayCtx from "./kaplayCtx";
 import makePlayer from "./entities/Player";
 import makeSection from "./components/Section";
-
 import {
-  musicVolumeAtom,
-  sfxVolumeAtom,
-  cameraZoomValueAtom,
   store,
-  isSkillsModalVisibleAtom,
   skillsDataAtom,
-  isWorkExperienceModalVisibleAtom,
   workExperienceDataAtom,
-  isProjectGalleryVisibleAtom,
   projectsDataAtom,
-  isAboutModalVisibleAtom, 
   aboutDataAtom,
   socialsDataAtom,
-  sfxTriggerAtom,
-  themeAtom
+  themeAtom,
+  cameraZoomValueAtom,
+  isSkillsModalVisibleAtom,
+  isWorkExperienceModalVisibleAtom,
+  isProjectGalleryVisibleAtom,
+  isAboutModalVisibleAtom
 } from "./store";
-import { resolvePath, safeFetch } from "./utils";
+import { loadGameData } from "./utils/DataLoader";
+import { loadAssets } from "./utils/AssetLoader";
+import { initAudioSystem } from "./systems/AudioManager";
 
 export default async function initGame() {
   // --- 1. DATA LOADING ---
-  const theme = await safeFetch("configs/theme.json");
-  const aboutData = await safeFetch("configs/aboutData.json");
-  const layoutData = await safeFetch("configs/layoutData.json"); 
-  const playerData = await safeFetch("configs/playerData.json"); 
-  
-  const skillsData = await safeFetch("configs/skillsData.json");
-  const socialsData = await safeFetch("configs/socialsData.json");
-  const experiencesData = await safeFetch("configs/experiencesData.json");
-  const projectsData = await safeFetch("configs/projectsData.json");
+  const data = await loadGameData();
+  const { theme, aboutData, layoutData, playerData, skillsData, socialsData, experiencesData, projectsData } = data;
 
   // --- 2. THEME SETUP ---
   const root = document.documentElement;
@@ -49,142 +40,13 @@ export default async function initGame() {
 
   const k = makeKaplayCtx();
 
-  // --- 4. DYNAMIC ASSET LOADING ---
-  const loadPromises = []; 
-  const loadedAssets = new Set(); 
+  // --- 4. ASSET & AUDIO LOADING ---
+  const assetPromises = loadAssets(k, data);
+  const audioPromise = initAudioSystem(k, theme);
   
-  const loadAsset = (name, relativePath) => {
-    if (!name || loadedAssets.has(name)) return;
-    loadPromises.push(k.loadSprite(name, resolvePath(relativePath)));
-    loadedAssets.add(name);
-  };
-
-  // Sprite Loading
-  if (Array.isArray(skillsData)) skillsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `logos/${s.logoData.name}.png`));
-  if (Array.isArray(socialsData)) socialsData.forEach(s => s.logoData?.name && loadAsset(s.logoData.name, `logos/${s.logoData.name}.png`));
-  if (Array.isArray(projectsData)) projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `projects/${p.thumbnail}.png`));
-
-  // Load Player Sprite
-  const spriteName = playerData.sprite || "player";
-  loadPromises.push(k.loadSprite("player", resolvePath(`sprites/${spriteName}.png`), {
-    sliceX: playerData.sliceX || 4,
-    sliceY: playerData.sliceY || 8,
-    anims: playerData.anims || { "walk-down-idle": 0 },
-  }));
-
-  // Load Fonts & Shader
-  loadPromises.push(k.loadFont("ibm-regular", resolvePath("fonts/IBMPlexSans-Regular.ttf")));
-  loadPromises.push(k.loadFont("ibm-bold", resolvePath("fonts/IBMPlexSans-Bold.ttf")));
-  loadPromises.push(k.loadShaderURL("tiledPattern", null, resolvePath("shaders/tiledPattern.frag")));
+  await Promise.all([...assetPromises, audioPromise]);
   
-  // --- AUDIO LOADING ---
-  const loadSoundSafe = (k, id, relativePath) => {
-    const fullPath = resolvePath(relativePath);
-    return new Promise((resolve) => {
-        k.loadSound(id, fullPath).then(resolve).catch(e => {
-            console.warn(`[Audio Skipped] ID: ${id}, Path: ${fullPath}`, e);
-            resolve(); 
-        });
-    });
-  };
-
-  // 1. SFX
-  loadPromises.push(loadSoundSafe(k, "flip", "audio/flip.mp3"));
-  loadPromises.push(loadSoundSafe(k, "match", "audio/match.mp3"));
-  
-  if (theme.audio && theme.audio.sfx) {
-    for (const [key, filename] of Object.entries(theme.audio.sfx)) {
-      loadPromises.push(loadSoundSafe(k, key, `audio/${filename}`));
-    }
-  }
-
-  // 2. Playlist (BGM)
-  const playlist = theme.audio?.playlist || ["background-music.mp3"]; 
-  playlist.forEach((trackName) => {
-    loadPromises.push(loadSoundSafe(k, trackName, `audio/${trackName}`)); 
-  });
-
-  // --- WAIT FOR ALL ASSETS ---
-  await Promise.all(loadPromises);
-  
-  // --- 5. AUDIO SYSTEM ---
-  let currentTrackIndex = 0;
-  let bgm = null;
-  let musicStarted = false;
-
-  function playTrack(index) {
-    if (bgm) bgm.stop();
-    const trackName = playlist[index];
-    try {
-        bgm = k.play(trackName, { 
-            loop: false, 
-            volume: store.get(musicVolumeAtom) 
-        });
-        bgm.onEnd(() => {
-            currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
-            playTrack(currentTrackIndex);
-        });
-    } catch (e) {
-        console.warn(`[BGM Error]`, e);
-    }
-  }
-
-  // --- AUDIO UNLOCKER ---
-  // This function tries to resume audio on direct user interactions ONLY.
-  // It checks if resumption was successful before setting the flag.
-  const tryStartAudio = async () => {
-    if (musicStarted) return; // Already successfully started
-
-    const ctx = k.audioCtx;
-    if (!ctx) return;
-
-    try {
-        // Force resume if suspended
-        if (ctx.state === "suspended") {
-            await ctx.resume();
-        }
-
-        // Only play if we are truly running now
-        if (ctx.state === "running") {
-            if (playlist.length > 0) {
-                playTrack(currentTrackIndex);
-                musicStarted = true;
-                
-                // Cleanup listeners only when we are sure it started
-                window.removeEventListener("touchstart", tryStartAudio, { capture: true });
-                window.removeEventListener("click", tryStartAudio, { capture: true });
-                window.removeEventListener("keydown", tryStartAudio, { capture: true });
-            }
-        }
-    } catch (e) {
-        console.warn("Audio resume attempt failed", e);
-    }
-  };
-
-  // Attach to global window events with capture to catch them first
-  window.addEventListener("touchstart", tryStartAudio, { capture: true });
-  window.addEventListener("click", tryStartAudio, { capture: true });
-  window.addEventListener("keydown", tryStartAudio, { capture: true });
-
-  // Sync volume updates
-  k.onUpdate(() => { if (bgm) bgm.volume = store.get(musicVolumeAtom); });
-
-  // 5b. SFX BRIDGE
-  store.sub(sfxTriggerAtom, () => {
-    const sfx = store.get(sfxTriggerAtom);
-    if (sfx && sfx.name) {
-       // Piggyback: Try to unlock audio when an SFX is requested (e.g. Memory Game click)
-       if (!musicStarted) tryStartAudio(); 
-
-       try {
-         k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
-       } catch (e) {
-         console.warn("SFX error:", e);
-       }
-    }
-  });
-
-  // --- 6. PLAYER PAUSE ---
+  // --- 5. PLAYER PAUSE LOGIC ---
   const pauseAnim = playerData.directions === 4 ? "idle" : "walk-down-idle";
 
   k.onUpdate(() => {
@@ -207,7 +69,7 @@ export default async function initGame() {
     }
   });
 
-  // --- 7. CAMERA ---
+  // --- 6. CAMERA ---
   const setInitCamZoomValue = () => {
     if (k.width() < 1000) { k.setCamScale(k.vec2(0.5)); store.set(cameraZoomValueAtom, 0.5); return; }
     k.setCamScale(k.vec2(0.8)); store.set(cameraZoomValueAtom, 0.8);
@@ -218,7 +80,7 @@ export default async function initGame() {
     if (val !== k.getCamScale().x) k.setCamScale(k.vec2(val));
   });
 
-  // --- 8. BACKGROUND ---
+  // --- 7. BACKGROUND ---
   const bgConfig = theme.background || { type: "shader", asset: "tiledPattern" };
   
   if (bgConfig.type === "image") {
@@ -247,7 +109,7 @@ export default async function initGame() {
     });
   }
 
-  // --- 9. SECTIONS ---
+  // --- 8. SECTIONS ---
   const atomMap = {
     "about": isAboutModalVisibleAtom,
     "skills": isSkillsModalVisibleAtom,
