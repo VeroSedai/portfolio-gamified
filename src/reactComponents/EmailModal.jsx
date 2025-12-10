@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
-import { isEmailModalVisibleAtom, emailAtom } from "../store";
+import { isEmailModalVisibleAtom, emailAtom } from "../stores";
 
 export default function EmailModal() {
   const [isVisible, setIsVisible] = useAtom(isEmailModalVisibleAtom);

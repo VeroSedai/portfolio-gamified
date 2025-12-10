@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAtom, useAtomValue } from "jotai";
-import { isProjectGalleryVisibleAtom, projectsDataAtom } from "../store";
+import { isProjectGalleryVisibleAtom, projectsDataAtom } from "../stores";
 
 export default function ProjectGalleryModal() {
   const [isVisible, setIsVisible] = useAtom(isProjectGalleryVisibleAtom);

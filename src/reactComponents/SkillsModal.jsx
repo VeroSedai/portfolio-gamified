@@ -5,7 +5,7 @@ import {
   skillsDataAtom, 
   sfxVolumeAtom,
   themeAtom
-} from "../store";
+} from "../stores";
 
 // Helper function to shuffle array (Fisher-Yates)
 const shuffleArray = (array) => {

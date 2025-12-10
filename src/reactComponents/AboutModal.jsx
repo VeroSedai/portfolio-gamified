@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
-import { isAboutModalVisibleAtom, aboutDataAtom, socialsDataAtom } from "../store";
+import { isAboutModalVisibleAtom, aboutDataAtom, socialsDataAtom } from "../stores";
 
 export default function AboutModal() {
   const [isVisible, setIsVisible] = useAtom(isAboutModalVisibleAtom);
