@@ -3,7 +3,7 @@ import {
   isSocialModalVisibleAtom,
   selectedLinkAtom,
   selectedLinkDescriptionAtom,
-} from "../store";
+} from "../stores";
 
 export default function SocialModal() {
   const [isVisible, setIsVisible] = useAtom(isSocialModalVisibleAtom);

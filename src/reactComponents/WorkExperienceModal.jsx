@@ -1,5 +1,5 @@
 import { useAtom, useAtomValue } from "jotai";
-import { isWorkExperienceModalVisibleAtom, workExperienceDataAtom } from "../store";
+import { isWorkExperienceModalVisibleAtom, workExperienceDataAtom } from "../stores";
 
 export default function WorkExperienceModal() {
   const [isVisible, setIsVisible] = useAtom(isWorkExperienceModalVisibleAtom);

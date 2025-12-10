@@ -1,5 +1,5 @@
 import { useAtomValue, useAtom } from "jotai";
-import { isProjectModalVisibleAtom, chosenProjectDataAtom } from "../store";
+import { isProjectModalVisibleAtom, chosenProjectDataAtom } from "../stores";
 
 export default function ProjectModal() {
   const projectData = useAtomValue(chosenProjectDataAtom);

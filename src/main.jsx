@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import ReactUI from "./ReactUI";
 import { Provider } from "jotai";
-import { store } from "./store";
+import { store } from "./stores";
 import initGame from "./initGame";
 import '/style.scss';
 

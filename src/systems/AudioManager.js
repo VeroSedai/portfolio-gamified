@@ -1,5 +1,5 @@
 import { resolvePath } from "../utils/index";
-import { store, musicVolumeAtom, sfxTriggerAtom, sfxVolumeAtom } from "../store";
+import { store, musicVolumeAtom, sfxTriggerAtom, sfxVolumeAtom } from "../stores";
 
 export function initAudioSystem(k, theme) {
     const loadPromises = [];

@@ -14,7 +14,7 @@ import {
   isWorkExperienceModalVisibleAtom,
   isProjectGalleryVisibleAtom,
   isAboutModalVisibleAtom
-} from "./store";
+} from "./stores";
 import { loadGameData } from "./utils/DataLoader";
 import { loadAssets } from "./utils/AssetLoader";
 import { initAudioSystem } from "./systems/AudioManager";

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAtom } from "jotai";
-import { musicVolumeAtom, sfxVolumeAtom } from "../store";
+import { musicVolumeAtom, sfxVolumeAtom } from "../stores";
 
 export default function VolumeControl() {
   const [musicVolume, setMusicVolume] = useAtom(musicVolumeAtom);

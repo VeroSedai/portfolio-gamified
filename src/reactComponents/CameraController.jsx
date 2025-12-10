@@ -1,5 +1,5 @@
 import { useAtom } from "jotai";
-import { cameraZoomValueAtom } from "../store";
+import { cameraZoomValueAtom } from "../stores";
 import { ZOOM_MAX_BOUND, ZOOM_MIN_BOUND } from "../constants";
 
 export default function CameraController() {
