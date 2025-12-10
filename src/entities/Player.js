@@ -7,6 +7,7 @@ import {
   isWorkExperienceModalVisibleAtom,
   isAboutModalVisibleAtom,
   isProjectGalleryVisibleAtom,
+  isDialogueVisibleAtom,
   store,
 } from "../stores";
 import { getDirectionFromInput, updatePlayerAnimation } from "./playerUtils";
@@ -63,6 +64,7 @@ export default function makePlayer(k, posVec2, playerConfig) {
       store.get(isWorkExperienceModalVisibleAtom) ||
       store.get(isAboutModalVisibleAtom) ||
       store.get(isProjectGalleryVisibleAtom) ||
+      store.get(isDialogueVisibleAtom) ||
       player.paused 
     ) {
       if (!player.paused) {

@@ -1,17 +1,43 @@
 [
-    {
-      "pos": { "x": 0, "y": 350 },
-      "thumbnail": "TarnishedMindMap",
-      "data": {
-        "title": "Elden Ring Lore Board Tarnished mind map",
-        "shortDesc":"A drag & drop web app inspired by tools like Mural, designed to build mind maps and reconstruct the lore of Elden Ring. It integrates official data through the GraphQL API of Elden Ring Fan API, with support for saving boards and real-time collaboration.",
-        "links": [
-          {
-            "id": 0,
-            "name": "Source Code",
-            "link": "https://github.com/VeroSedai/TarnishedMindMap"
-          }
-        ]
-      }
+  {
+    "pos": {
+      "x": 0,
+      "y": 350
+    },
+    "thumbnail": "TarnishedMindMap",
+    "data": {
+      "title": "Elden Ring Lore Board Tarnished mind map",
+      "shortDesc": "A drag & drop web app inspired by tools like Mural, designed to build mind maps and reconstruct the lore of Elden Ring. It integrates official data through the GraphQL API of Elden Ring Fan API, with support for saving boards and real-time collaboration.",
+      "links": [
+        {
+          "id": 0,
+          "name": "Source Code",
+          "link": "https://github.com/VeroSedai/TarnishedMindMap"
+        }
+      ]
     }
-  ]
+  },
+  {
+    "pos": {
+      "x": 0,
+      "y": 840
+    },
+    "thumbnail": "portfolio-gamified",
+    "data": {
+      "title": "Portfolio Gamified",
+      "shortDesc": "Turn your resume into an interactive game world. The template is fully modular: logic is decoupled from content, which is supplied through JSON configuration files.",
+      "links": [
+        {
+          "id": 0,
+          "name": "Live Demo",
+          "link": "https://verosedai.github.io/portfolio-gamified/"
+        },
+        {
+          "id": 1,
+          "name": "Source Code",
+          "link": "https://github.com/VeroSedai/portfolio-gamified"
+        }
+      ]
+    }
+  }
+]
