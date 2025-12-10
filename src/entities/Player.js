@@ -17,7 +17,7 @@ export default function makePlayer(k, posVec2, playerConfig) {
 
   const player = k.add([
     k.sprite("player", { anim: "walk-down" }),
-    k.scale(8),
+    k.scale(playerConfig.scale || 8),
     k.anchor("center"),
     k.area({ shape: new k.Rect(k.vec2(0), 10, 10) }),
     k.body(),

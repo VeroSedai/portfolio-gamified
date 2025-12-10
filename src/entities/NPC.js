@@ -10,11 +10,12 @@ import {
 export default function makeNPC(k, config) {
   const npc = k.add([
     k.sprite(config.sprite || "player", { anim: "idle" }), // Default to player sprite
-    k.scale(8),
+    k.scale(config.scale || 8),
     k.anchor("center"),
     k.area({ shape: new k.Rect(k.vec2(0), 12, 12) }),
     k.body({ isStatic: true }),
     k.pos(config.position.x, config.position.y),
+    k.z(10),
     "npc",
     {
       id: config.id,
@@ -38,25 +39,29 @@ export default function makeNPC(k, config) {
      label.pos.y = -18 + Math.sin(k.time() * 5) * 2;
   });
 
-  // Collision Logic
+  // Interaction Logic (Distance check)
   let isNear = false;
+  const INTERACTION_DIST = 80; // Distance to trigger label
 
-  npc.onCollide("player", () => {
-      isNear = true;
-      k.tween(label.opacity, 1, 0.2, (v) => label.opacity = v, k.easings.linear);
-      if (config.stopMusicOnTouch) {
-          store.set(isMusicPausedAtom, true);
-      }
-  });
+  npc.onUpdate(() => {
+     const player = k.get("player")[0];
+     if (!player) return;
 
-  npc.onCollideEnd("player", () => {
-      isNear = false;
-      k.tween(label.opacity, 0, 0.2, (v) => label.opacity = v, k.easings.linear);
-      if (config.stopMusicOnTouch) {
-          store.set(isMusicPausedAtom, false);
-      }
-      // Close dialogue if walking away? Optional. 
-      // store.set(isDialogueVisibleAtom, false); 
+     const dist = player.pos.dist(npc.pos);
+     
+     if (dist < INTERACTION_DIST) {
+         if (!isNear) {
+             isNear = true;
+             k.tween(label.opacity, 1, 0.2, (v) => label.opacity = v, k.easings.linear);
+             if (config.stopMusicOnTouch) store.set(isMusicPausedAtom, true);
+         }
+     } else {
+         if (isNear) {
+            isNear = false;
+            k.tween(label.opacity, 0, 0.2, (v) => label.opacity = v, k.easings.linear);
+            if (config.stopMusicOnTouch) store.set(isMusicPausedAtom, false);
+         }
+     }
   });
 
   // Input to Trigger Dialogue
