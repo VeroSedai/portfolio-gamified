@@ -1,5 +1,5 @@
 import { resolvePath } from "../utils/index";
-import { store, musicVolumeAtom, sfxTriggerAtom, sfxVolumeAtom } from "../stores";
+import { store, musicVolumeAtom, sfxTriggerAtom, sfxVolumeAtom, isMusicPausedAtom } from "../stores";
 
 export function initAudioSystem(k, theme) {
     const loadPromises = [];
@@ -95,6 +95,17 @@ export function initAudioSystem(k, theme) {
                 k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
             } catch (e) {
                 console.warn("SFX error:", e);
+            }
+        }
+    });
+
+    store.sub(isMusicPausedAtom, () => {
+        const isPaused = store.get(isMusicPausedAtom);
+        if (bgm) {
+            if (isPaused) {
+                bgm.paused = true; 
+            } else {
+                bgm.paused = false;
             }
         }
     });

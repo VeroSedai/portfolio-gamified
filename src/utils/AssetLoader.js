@@ -1,6 +1,6 @@
 import { resolvePath } from "./index";
 
-export const loadAssets = (k, { skillsData, socialsData, projectsData, playerData }) => {
+export const loadAssets = (k, { skillsData, socialsData, projectsData, playerData, npcData }) => {
   const loadPromises = [];
   const loadedAssets = new Set();
 
@@ -19,6 +19,20 @@ export const loadAssets = (k, { skillsData, socialsData, projectsData, playerDat
   }
   if (Array.isArray(projectsData)) {
     projectsData.forEach(p => p.thumbnail && loadAsset(p.thumbnail, `projects/${p.thumbnail}.png`));
+  }
+  
+  // NPC Sprites
+  if (Array.isArray(npcData)) {
+      npcData.forEach(npc => {
+         if (npc.sprite && npc.sprite !== "player") {
+           // Providing default sprite config - can be customized per NPC if json supports it
+           loadPromises.push(k.loadSprite(npc.sprite, resolvePath(`sprites/${npc.sprite}.png`), {
+             sliceX: npc.sliceX || 4,
+             sliceY: npc.sliceY || 8,
+             anims: npc.anims || { "idle": 0, "walk-down": 0 }
+           }));
+         }
+      });
   }
 
   // Load Player Sprite

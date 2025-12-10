@@ -10,7 +10,8 @@ export const loadGameData = async () => {
     skillsData,
     socialsData,
     experiencesData,
-    projectsData
+    projectsData,
+    npcData
   ] = await Promise.all([
     safeFetch("configs/theme.json"),
     safeFetch("configs/aboutData.json"),
@@ -19,7 +20,8 @@ export const loadGameData = async () => {
     safeFetch("configs/skillsData.json"),
     safeFetch("configs/socialsData.json"),
     safeFetch("configs/experiencesData.json"),
-    safeFetch("configs/projectsData.json")
+    safeFetch("configs/projectsData.json"),
+    safeFetch("configs/npcData.json")
   ]);
 
   return {
@@ -30,6 +32,7 @@ export const loadGameData = async () => {
     skillsData,
     socialsData,
     experiencesData,
-    projectsData
+    projectsData,
+    npcData
   };
 };

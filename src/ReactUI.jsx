@@ -7,6 +7,7 @@ import SkillsModal from "./reactComponents/SkillsModal";
 import WorkExperienceModal from "./reactComponents/WorkExperienceModal";
 import ProjectGalleryModal from "./reactComponents/ProjectGalleryModal";
 import AboutModal from "./reactComponents/AboutModal";
+import DialogueBox from "./reactComponents/DialogueBox";
 
 export default function ReactUI() {
   return (
@@ -21,6 +22,7 @@ export default function ReactUI() {
       <WorkExperienceModal />
       <ProjectGalleryModal />
       <AboutModal />
+      <DialogueBox />
     </>
   );
 }

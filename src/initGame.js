@@ -1,6 +1,8 @@
 import makeKaplayCtx from "./kaplayCtx";
 import makePlayer from "./entities/Player";
 import makeSection from "./components/Section";
+import makeNPC from "./entities/NPC"; // Import NPC factory
+
 import {
   store,
   skillsDataAtom,
@@ -13,7 +15,8 @@ import {
   isSkillsModalVisibleAtom,
   isWorkExperienceModalVisibleAtom,
   isProjectGalleryVisibleAtom,
-  isAboutModalVisibleAtom
+  isAboutModalVisibleAtom,
+  npcDataAtom
 } from "./stores";
 import { loadGameData } from "./utils/DataLoader";
 import { loadAssets } from "./utils/AssetLoader";
@@ -22,7 +25,7 @@ import { initAudioSystem } from "./systems/AudioManager";
 export default async function initGame() {
   // --- 1. DATA LOADING ---
   const data = await loadGameData();
-  const { theme, aboutData, layoutData, playerData, skillsData, socialsData, experiencesData, projectsData } = data;
+  const { theme, aboutData, layoutData, playerData, skillsData, socialsData, experiencesData, projectsData, npcData } = data;
 
   // --- 2. THEME SETUP ---
   const root = document.documentElement;
@@ -37,6 +40,7 @@ export default async function initGame() {
   store.set(aboutDataAtom, aboutData); 
   store.set(socialsDataAtom, socialsData); 
   store.set(themeAtom, theme); 
+  store.set(npcDataAtom, npcData);
 
   const k = makeKaplayCtx();
 
@@ -151,6 +155,13 @@ export default async function initGame() {
         triggerOnce
       );
     });
+  }
+
+  // --- 9. SPAWN NPCs ---
+  if (Array.isArray(npcData)) {
+      npcData.forEach(npcConfig => {
+          makeNPC(k, npcConfig);
+      });
   }
 
   // --- CREATE PLAYER ---

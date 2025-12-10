@@ -18,3 +18,8 @@ export const isSkillsModalVisibleAtom = atom(false);
 export const isWorkExperienceModalVisibleAtom = atom(false);
 export const isProjectGalleryVisibleAtom = atom(false);
 export const isAboutModalVisibleAtom = atom(false);
+
+export const isDialogueVisibleAtom = atom(false);
+export const dialogueContentAtom = atom([]);
+export const currentNpcNameAtom = atom("");
+export const dialoguePositionAtom = atom({ x: 0, y: 0 });

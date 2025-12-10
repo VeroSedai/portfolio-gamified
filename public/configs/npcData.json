@@ -1,0 +1,22 @@
+[
+    {
+        "id": 1,
+        "name": "Guide",
+        "sprite": "player_skelly",
+        "position": {
+            "x": 100,
+            "y": -100
+        },
+        "sliceX": 3,
+        "sliceY": 4,
+        "anims": {
+            "idle": 1
+        },
+        "stopMusicOnTouch": true,
+        "dialogue": [
+            "Welcome to Veronica's Portfolio!",
+            "Explore the sections to see her work.",
+            "Watch out for the bugs... just kidding!"
+        ]
+    }
+]
