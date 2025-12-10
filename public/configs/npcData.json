@@ -4,12 +4,15 @@
         "name": "Morpheus",
         "sprite": "player_morpheus",
         "position": {
-            "x": 200,
-            "y": 200
+            "x": -3000,
+            "y": -1000
         },
         "sliceX": 1,
         "sliceY": 1,
-        "scale": 2.7,
+        "scale": 3.5,
+        "areaWidth": 50,
+        "areaHeight": 50,
+        "interactionDist": 350,
         "anims": {
             "idle": 0
         },

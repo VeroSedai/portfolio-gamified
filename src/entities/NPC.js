@@ -12,7 +12,7 @@ export default function makeNPC(k, config) {
     k.sprite(config.sprite || "player", { anim: "idle" }), // Default to player sprite
     k.scale(config.scale || 8),
     k.anchor("center"),
-    k.area({ shape: new k.Rect(k.vec2(0), 12, 12) }),
+    k.area({ shape: new k.Rect(k.vec2(0), config.areaWidth || 12, config.areaHeight || 12) }),
     k.body({ isStatic: true }),
     k.pos(config.position.x, config.position.y),
     k.z(10),
@@ -27,7 +27,7 @@ export default function makeNPC(k, config) {
   // Interaction Label
   const label = npc.add([
     k.text("!", { font: "ibm-bold", size: 14 }),
-    k.color(k.Color.YELLOW),
+    k.color(k.Color.fromHex("#00FF41")),
     k.anchor("center"),
     k.pos(0, -18),
     k.opacity(0),
@@ -41,7 +41,7 @@ export default function makeNPC(k, config) {
 
   // Interaction Logic (Distance check)
   let isNear = false;
-  const INTERACTION_DIST = 80; // Distance to trigger label
+  const INTERACTION_DIST = config.interactionDist || 80; // Distance to trigger label
 
   npc.onUpdate(() => {
      const player = k.get("player")[0];
