@@ -8,6 +8,7 @@ import WorkExperienceModal from "./reactComponents/WorkExperienceModal";
 import ProjectGalleryModal from "./reactComponents/ProjectGalleryModal";
 import AboutModal from "./reactComponents/AboutModal";
 import DialogueBox from "./reactComponents/DialogueBox";
+import MatrixRain from "./reactComponents/MatrixRain";
 
 export default function ReactUI() {
   return (
@@ -23,6 +24,7 @@ export default function ReactUI() {
       <ProjectGalleryModal />
       <AboutModal />
       <DialogueBox />
+      <MatrixRain />
     </>
   );
 }

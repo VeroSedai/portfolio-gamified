@@ -23,3 +23,5 @@ export const isDialogueVisibleAtom = atom(false);
 export const dialogueContentAtom = atom([]);
 export const currentNpcNameAtom = atom("");
 export const dialoguePositionAtom = atom({ x: 0, y: 0 });
+export const dialogueOptionsAtom = atom(null); // { yes: "Text", no: "Text" } or null
+export const dialogueActionAtom = atom(null); // "START_MATRIX_GAME" etc.

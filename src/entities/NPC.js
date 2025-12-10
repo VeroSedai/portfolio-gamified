@@ -4,6 +4,8 @@ import {
   currentNpcNameAtom,
   dialoguePositionAtom,
   isMusicPausedAtom,
+  dialogueOptionsAtom,
+  dialogueActionAtom,
   store
 } from "../stores";
 
@@ -71,7 +73,15 @@ export default function makeNPC(k, config) {
         const screenPos = k.toScreen(npc.pos);
         store.set(dialoguePositionAtom, { x: screenPos.x, y: screenPos.y });
         store.set(currentNpcNameAtom, config.name);
-        store.set(dialogueContentAtom, config.dialogue);
+        
+        let finalDialogue = [...config.dialogue];
+        if (config.question) {
+            finalDialogue.push(config.question);
+        }
+        store.set(dialogueContentAtom, finalDialogue);
+        store.set(dialogueOptionsAtom, config.options || null);
+        store.set(dialogueActionAtom, config.action || null);
+
         store.set(isDialogueVisibleAtom, true);
     }
   });
@@ -82,7 +92,15 @@ export default function makeNPC(k, config) {
         const screenPos = k.toScreen(npc.pos);
         store.set(dialoguePositionAtom, { x: screenPos.x, y: screenPos.y });
         store.set(currentNpcNameAtom, config.name);
-        store.set(dialogueContentAtom, config.dialogue);
+        
+        let finalDialogue = [...config.dialogue];
+        if (config.question) {
+            finalDialogue.push(config.question);
+        }
+        store.set(dialogueContentAtom, finalDialogue);
+        store.set(dialogueOptionsAtom, config.options || null);
+        store.set(dialogueActionAtom, config.action || null);
+        
         store.set(isDialogueVisibleAtom, true);
      }
   });

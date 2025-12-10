@@ -23,6 +23,12 @@
             "You've felt it your entire life, that there's something wrong with the world.",
             "You don't know what it is, but it's there, like a splinter in your mind, driving you mad.",
             "It is this feeling that has brought you to me."
-        ]
+        ],
+        "question": "Do you want to know what the Matrix is?",
+        "options": {
+            "yes": "Yes",
+            "no": "No"
+        },
+        "action": "START_MATRIX_GAME"
     }
 ]
