@@ -5,7 +5,11 @@ import {
   isDialogueVisibleAtom,
   dialogueContentAtom,
   currentNpcNameAtom,
-  dialoguePositionAtom
+  dialoguePositionAtom,
+  dialogueOptionsAtom,
+  dialogueActionAtom,
+  activeMiniGameAtom,
+  store
 } from "../stores";
 
 const DialogueBox = () => {
@@ -13,10 +17,13 @@ const DialogueBox = () => {
   const [content] = useAtom(dialogueContentAtom);
   const [npcName] = useAtom(currentNpcNameAtom);
   const [pos] = useAtom(dialoguePositionAtom);
+  const [options] = useAtom(dialogueOptionsAtom);
+  const [action] = useAtom(dialogueActionAtom);
   
   const [lineIndex, setLineIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const [charIndex, setCharIndex] = useState(0);
+  const [isOptionsVisible, setIsOptionsVisible] = useState(false);
 
   // Reset when opened
   useEffect(() => {
@@ -24,6 +31,7 @@ const DialogueBox = () => {
       setLineIndex(0);
       setDisplayedText("");
       setCharIndex(0);
+      setIsOptionsVisible(false);
     }
   }, [isVisible, content]);
 
@@ -38,16 +46,24 @@ const DialogueBox = () => {
         setCharIndex(prev => prev + 1);
       }, 30); // Speed of typing
       return () => clearTimeout(timeout);
+    } else {
+        // Line finished, check if it's the last line and we have options
+        if (lineIndex === content.length - 1 && options) {
+            setIsOptionsVisible(true);
+        }
     }
-  }, [charIndex, lineIndex, isVisible, content]);
+  }, [charIndex, lineIndex, isVisible, content, options]);
 
   const handleNext = () => {
+    if (isOptionsVisible) return; // Don't advance if options are shown
+
     const currentLine = content[lineIndex];
 
     // If still typing, complete immediately
     if (charIndex < currentLine.length) {
         setDisplayedText(currentLine);
         setCharIndex(currentLine.length);
+        if (lineIndex === content.length - 1 && options) setIsOptionsVisible(true);
         return;
     }
 
@@ -59,6 +75,17 @@ const DialogueBox = () => {
     } else {
       setIsVisible(false);
     }
+  };
+
+  const handleOption = (choice) => {
+      if (choice === "yes") {
+          if (action === "START_MATRIX_GAME") {
+              store.set(activeMiniGameAtom, "matrix");
+          }
+          setIsVisible(false);
+      } else {
+          setIsVisible(false);
+      }
   };
 
   if (!isVisible) return null;
@@ -76,9 +103,18 @@ const DialogueBox = () => {
         {displayedText}
          <span className="cursor">|</span>
       </p>
-      <div className="hint-text">
-        [TAP]
-      </div>
+
+      {/* Options Buttons */}
+      {isOptionsVisible && options ? (
+        <div className="dialogue-options">
+            <button className="option-btn" onClick={() => handleOption("yes")}>{options.yes}</button>
+            <button className="option-btn" onClick={() => handleOption("no")}>{options.no}</button>
+        </div>
+      ) : (
+        <div className="hint-text">
+            [TAP]
+        </div>
+      )}
       
       {/* Speech Bubble Arrow */}
       <div className="speech-arrow"></div>
