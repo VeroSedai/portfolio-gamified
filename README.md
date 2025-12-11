@@ -46,6 +46,15 @@ Touch-to-move controls, virtual D-pad, and fully responsive UI.
 
 Sprites, audio, textures, and more are loaded dynamically from JSON manifests.
 
+### **NPC & Dialogue System**
+
+Fully interactive NPCs with:
+
+* **Proximity Detection**: Visual cues ("!") when near.
+* **Rich Dialogue**: Typewriter effect, multiple pages of text.
+* **Interactive Choices**: Support for Yes/No options that trigger in-game events (e.g., launching mini-games).
+* **Configurable**: Defined via `npcData.json`.
+
 ---
 
 ## 🛠️ Tech Stack
@@ -87,6 +96,7 @@ All configuration files live in `public/configs/`.
 | ------------------------ | ----------------------------------------------------------- |
 | **aboutData.json**       | Personal info: Name, Bio, Stats, Education, Certifications. |
 | **layoutData.json**      | World entities: portals, icons, types, coordinates.         |
+| **npcData.json**         | NPC definitions: position, sprites, dialogues, interactions.|
 | **theme.json**           | Colors, shaders/images, music playlist, SFX.                |
 | **playerData.json**      | Player sprite configuration, sliceX/Y, animations, speed.   |
 | **skillsData.json**      | Skills and icons used in the Memory Game modal.             |
