@@ -5,6 +5,9 @@ A **data-driven 2D RPG portfolio engine** built with **React**, **Kaplay.js**, a
 Turn your resume into an interactive game world.
 The template is fully modular: logic is decoupled from content, which is supplied through JSON configuration files.
 
+<img width="1144" height="592" alt="image" src="https://github.com/user-attachments/assets/08d677c4-8c61-4191-b668-1cdbaa7ea94c" />
+
+
 ---
 
 ## 🚀 Live Demo
