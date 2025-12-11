@@ -9,6 +9,8 @@ import {
   dialogueOptionsAtom,
   dialogueActionAtom,
   activeMiniGameAtom,
+  sfxTriggerAtom,
+  currentNpcSoundAtom,
   store
 } from "../stores";
 
@@ -19,6 +21,7 @@ const DialogueBox = () => {
   const [pos] = useAtom(dialoguePositionAtom);
   const [options] = useAtom(dialogueOptionsAtom);
   const [action] = useAtom(dialogueActionAtom);
+  const [npcSound] = useAtom(currentNpcSoundAtom);
   
   const [lineIndex, setLineIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
@@ -44,6 +47,23 @@ const DialogueBox = () => {
       const timeout = setTimeout(() => {
         setDisplayedText(prev => prev + currentLine[charIndex]);
         setCharIndex(prev => prev + 1);
+
+        // Logic to "follow the words": 
+        // Play sound if start of a word (charIndex=0 or prev is space)
+        // OR every 3rd character for long words to keep rhythm
+        const isStartOfWord = charIndex === 0 || currentLine[charIndex - 1] === " ";
+        const isLongWordRhythm = charIndex % 3 === 0 && currentLine[charIndex] !== " ";
+
+        if (isStartOfWord || isLongWordRhythm) {
+           store.set(sfxTriggerAtom, { 
+               name: npcSound || "talk", 
+               id: Math.random(),
+               options: {
+                   detune: Math.floor(Math.random() * 200) - 100, // Random pitch variation +/- 100 cents
+                   speed: 0.9 + Math.random() * 0.2 // Slight speed variation
+               }
+           });
+        }
       }, 30); // Speed of typing
       return () => clearTimeout(timeout);
     } else {

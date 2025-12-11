@@ -6,6 +6,7 @@ import {
   isMusicPausedAtom,
   dialogueOptionsAtom,
   dialogueActionAtom,
+  currentNpcSoundAtom,
   store
 } from "../stores";
 
@@ -73,6 +74,7 @@ export default function makeNPC(k, config) {
         const screenPos = k.toScreen(npc.pos);
         store.set(dialoguePositionAtom, { x: screenPos.x, y: screenPos.y });
         store.set(currentNpcNameAtom, config.name);
+        store.set(currentNpcSoundAtom, config.talkSound || "talk");
         
         let finalDialogue = [...config.dialogue];
         if (config.question) {
@@ -92,6 +94,7 @@ export default function makeNPC(k, config) {
         const screenPos = k.toScreen(npc.pos);
         store.set(dialoguePositionAtom, { x: screenPos.x, y: screenPos.y });
         store.set(currentNpcNameAtom, config.name);
+        store.set(currentNpcSoundAtom, config.talkSound || "talk");
         
         let finalDialogue = [...config.dialogue];
         if (config.question) {

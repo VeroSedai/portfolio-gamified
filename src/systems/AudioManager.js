@@ -92,7 +92,10 @@ export function initAudioSystem(k, theme) {
             if (!musicStarted) tryStartAudio();
 
             try {
-                k.play(sfx.name, { volume: store.get(sfxVolumeAtom) });
+                k.play(sfx.name, { 
+                    volume: store.get(sfxVolumeAtom),
+                    ...sfx.options 
+                });
             } catch (e) {
                 console.warn("SFX error:", e);
             }

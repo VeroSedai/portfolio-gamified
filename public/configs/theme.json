@@ -1,32 +1,33 @@
 {
-    "themeName": "Cyberpunk Neon",
-    "colors": {
-      "background": "#0b0c15",
-      "text": "#ffffff",
-      "primary": "#2de2e6",
-      "secondary": "#ff0055",
-      "tertiary": "#f9f871",
-      "quaternary": "#bd93f9",
-      "cardBackground": "#1a1b26",
-      "cardBack": "#11111b"
-    },
-    "background": {
-      "type": "shader",
-      "asset": "tiledPattern",
-      "shaderParams": {
-        "speedX": 0.3,
-        "speedY": -0.3,
-        "size": 10
-      }
-    },
-    "audio": {
-      "enabled": true,
-      "playlist": [
-        "background-music.mp3" 
-      ],
-      "sfx": {
-        "flip": "flip.mp3",
-        "match": "match.mp3"
-      }
+  "themeName": "Cyberpunk Neon",
+  "colors": {
+    "background": "#0b0c15",
+    "text": "#ffffff",
+    "primary": "#2de2e6",
+    "secondary": "#ff0055",
+    "tertiary": "#f9f871",
+    "quaternary": "#bd93f9",
+    "cardBackground": "#1a1b26",
+    "cardBack": "#11111b"
+  },
+  "background": {
+    "type": "shader",
+    "asset": "tiledPattern",
+    "shaderParams": {
+      "speedX": 0.3,
+      "speedY": -0.3,
+      "size": 10
+    }
+  },
+  "audio": {
+    "enabled": true,
+    "playlist": [
+      "background-music.mp3"
+    ],
+    "sfx": {
+      "flip": "flip.mp3",
+      "match": "match.mp3",
+      "talk": "talk.mp3"
     }
   }
+}
