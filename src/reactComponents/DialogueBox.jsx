@@ -48,7 +48,7 @@ const DialogueBox = () => {
         setDisplayedText(prev => prev + currentLine[charIndex]);
         setCharIndex(prev => prev + 1);
 
-        // Logic to "follow the words":
+        // Logic to "follow the words": 
         // Play sound if start of a word (charIndex=0 or prev is space)
         // OR every 3rd character for long words to keep rhythm
         const isStartOfWord = charIndex === 0 || currentLine[charIndex - 1] === " ";
