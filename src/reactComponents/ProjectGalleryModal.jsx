@@ -32,7 +32,6 @@ export default function ProjectGalleryModal() {
   if (!isVisible || projects.length === 0) return null;
 
   const currentProject = projects[currentIndex];
-  const projectLink = currentProject.data.link || currentProject.data.github;
 
   return (
     <div className="modal">
@@ -49,7 +48,6 @@ export default function ProjectGalleryModal() {
             
             <div className="project-image-container">
               {currentProject.thumbnail && (
-                // FIX: Use BASE_URL for project thumbnail path
                 <img 
                   src={`${import.meta.env.BASE_URL}/projects/${currentProject.thumbnail}.png`} 
                   alt={currentProject.data.title} 
@@ -65,15 +63,16 @@ export default function ProjectGalleryModal() {
               </p>
               
               <div className="project-links">
-                {projectLink && (
+                {currentProject.data.links && currentProject.data.links.map((linkData) => (
                   <button 
+                    key={linkData.id}
                     className="modal-btn" 
-                    onClick={() => window.open(projectLink, "_blank")}
+                    onClick={() => window.open(linkData.link, "_blank")}
                     style={{ fontFamily: "ibm-bold" }}
                   >
-                    VIEW CODE
+                    {linkData.name}
                   </button>
-                )}
+                ))}
               </div>
               
               <div className="project-counter" style={{ fontFamily: "ibm-bold" }}>
